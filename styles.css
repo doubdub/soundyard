@@ -1193,6 +1193,19 @@ img { max-width: 100%; display: block; }
 .photo-drop:hover { border-color: #9ca3af; background: var(--bg-soft); }
 .photo-drop.is-busy { opacity: 0.6; pointer-events: none; }
 
+/* .field input의 width:100%가 .sr-only를 덮지 않도록 파일 입력을 제자리에 고정 */
+.field input.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 .photo-preview {
   border: 1px solid var(--line);
   border-radius: 6px;

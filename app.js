@@ -253,7 +253,7 @@ const SEED = [
       ['구성품', '정품 라이선스 (박스·USB 없음)'],
       ['시리얼·박스', '라이선스만 이전, 계정 이전 동의 필요']
     ],
-    desc: 'Ableton Live 12 Suite 정품 라이선스 이전 판매입니다. 제 계정에서 이전 처리 도와드리고, 결제 후 Ableton 고객센터 이전 절차까지 같이 진행합니다.\n\n박스나 USB는 없는 디지털 라이선스 상품입니다. 관악구 봉천동 직거래 또는 원격으로 진행 가능합니다.',
+    desc: 'Ableton Live 12 Suite 정품 라이선스 이전 판매입니다. 제 계정에서 이전 처리 도와드리고, 결제 후 Ableton 지원팀 이전 절차까지 같이 진행합니다.\n\n박스나 USB는 없는 디지털 라이선스 상품입니다. 관악구 봉천동 직거래 또는 원격으로 진행 가능합니다.',
     image: 'assets/software-ableton.svg'
   },
   {
@@ -1069,6 +1069,7 @@ function showPhotoResult(photo) {
   els.photoPreviewImg.src = photo.dataUrl;
   els.photoPreview.hidden = false;
   els.photoDrop.hidden = true;
+  els.photoRemove.hidden = false;
 
   const saving = photo.originalBytes
     ? Math.round((1 - photo.bytes / photo.originalBytes) * 100)
