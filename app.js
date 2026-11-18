@@ -511,6 +511,25 @@ const SEED = [
   }
 ];
 
+/* --------------------------------------------------------------- seed inquiries */
+
+const INQUIRY_SEED = [
+  {
+    id: 'q-seed-1',
+    title: 'Neumann TLM 103 매물 시리얼 확인 문의',
+    contact: '김도현, 010-2841-7730',
+    body: '등록된 TLM 103 사진에 시리얼 카드가 보이지 않아 문의드립니다. 시리얼 카드와 원박스가 모두 있는지, 정품 등록 이력이 있는지 확인 부탁드립니다.',
+    createdAt: Date.now() - 1000 * 60 * 60 * 26
+  },
+  {
+    id: 'q-seed-2',
+    title: '판매 등록 시 사진이 계속 실패합니다',
+    contact: '이서연, seoyeon.lee@example.com',
+    body: '아이폰으로 찍은 HEIC 사진을 올리면 미리보기가 나오지 않습니다. 사진 용량 제한이 있는지, 어떤 형식을 올려야 하는지 알려 주세요.',
+    createdAt: Date.now() - 1000 * 60 * 60 * 74
+  }
+];
+
 /* ------------------------------------------------------------------ helpers */
 
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -547,8 +566,34 @@ function readJSON(key, fallback) {
 function writeJSON(key, value) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
+    return true;
   } catch (err) {
     /* 저장이 막힌 브라우저에서는 이번 세션에만 유지 */
+    return false;
+  }
+}
+
+/* --------------------------------------------------------- inquiry constants */
+
+const INQUIRY_KEY = 'sy_inquiries';
+const ADMIN_SESSION_KEY = 'sy_admin_session';
+/* 데모용 관리자 비밀번호. 실제 서비스에서는 Cloudflare Workers + D1 인증으로 교체 (README 참고) */
+const ADMIN_PASSWORD = 'admin1234';
+
+function readAdminSession() {
+  try {
+    return sessionStorage.getItem(ADMIN_SESSION_KEY) === '1';
+  } catch (err) {
+    return false;
+  }
+}
+
+function writeAdminSession(on) {
+  try {
+    if (on) sessionStorage.setItem(ADMIN_SESSION_KEY, '1');
+    else sessionStorage.removeItem(ADMIN_SESSION_KEY);
+  } catch (err) {
+    /* 세션 저장이 막힌 브라우저에서는 이번 화면에만 유지 */
   }
 }
 
@@ -569,18 +614,21 @@ const state = {
   sort: 'latest',
   user: readJSON('sy_user', null),
   wishlist: new Set(readJSON('sy_wishlist', [])),
+  admin: readAdminSession(),
   custom: readJSON('sy_custom_listings', []).map((item) => ({
     ...item,
     image: item.image || CATEGORY_IMAGES[item.category] || CATEGORY_IMAGES[CAT.ETC]
-  }))
+  })),
+  inquiries: readJSON(INQUIRY_KEY, INQUIRY_SEED)
 };
 
 let currentDetailId = null;
 let pendingIntent = null;
 let lastFocused = null;
 let toastTimer = null;
-let sellCondition = 'A급';
 let newCardTimer = null;
+let pendingPhoto = null;
+let photoBusy = false;
 
 /* -------------------------------------------------------------------- views */
 
@@ -590,7 +638,6 @@ const els = {
   empty: $('#empty-state'),
   count: $('#result-count'),
   title: $('#list-title'),
-  sub: $('#list-sub'),
   search: $('#search-input'),
   searchClear: $('#search-clear'),
   sort: $('#sort-select'),
@@ -604,20 +651,29 @@ const els = {
   authModal: $('#auth-modal'),
   detailModal: $('#detail-modal'),
   sellModal: $('#sell-modal'),
+  inquiryModal: $('#inquiry-modal'),
   detailContent: $('#detail-content'),
-  authNotice: $('#auth-notice'),
-  loginForm: $('#login-form'),
-  signupForm: $('#signup-form'),
-  tabLogin: $('#tab-login'),
-  tabSignup: $('#tab-signup'),
-  loginError: $('#login-error'),
-  signupError: $('#signup-error'),
   sellForm: $('#sell-form'),
   sellCategory: $('#sell-category'),
   sellPrice: $('#sell-price'),
-  sellDesc: $('#sell-desc'),
-  descCount: $('#desc-count'),
+  sellContact: $('#sell-contact'),
+  sellPhoto: $('#sell-photo'),
+  photoDrop: $('#photo-drop'),
+  photoPreview: $('#photo-preview'),
+  photoPreviewImg: $('#photo-preview-img'),
+  photoRemove: $('#photo-remove'),
+  photoStatus: $('#photo-status'),
   sellError: $('#sell-error'),
+  inquiryList: $('#inquiry-list'),
+  inquiryForm: $('#inquiry-form'),
+  inquiryWriteToggle: $('#inquiry-write-toggle'),
+  inquiryError: $('#inquiry-error'),
+  adminBar: $('#admin-bar'),
+  adminState: $('#admin-state'),
+  adminToggle: $('#admin-toggle'),
+  adminForm: $('#admin-form'),
+  adminPassword: $('#admin-password'),
+  adminError: $('#admin-error'),
   toast: $('#toast')
 };
 
@@ -663,7 +719,7 @@ function filteredListings() {
   if (query) {
     list = list.filter((item) => (
       [item.title, item.brand, item.condition, item.region, item.category, item.desc]
-        .join(' ').toLowerCase().includes(query)
+        .filter(Boolean).join(' ').toLowerCase().includes(query)
     ));
   }
 
@@ -672,7 +728,7 @@ function filteredListings() {
   }
 
   if (state.trades.size > 0) {
-    list = list.filter((item) => item.trade.some((t) => state.trades.has(t)));
+    list = list.filter((item) => (item.trade || []).some((t) => state.trades.has(t)));
   }
 
   if (state.sort === 'price-asc') list.sort((a, b) => a.price - b.price);
@@ -683,10 +739,11 @@ function filteredListings() {
 }
 
 function cardHTML(item) {
+  const meta = [item.condition, item.region].filter(Boolean).join(', ');
   return `
-    <article class="listing-card" role="button" tabindex="0" data-id="${esc(item.id)}" aria-label="${esc(item.title)}, ${won(item.price)}원, ${esc(item.condition)}, ${esc(item.region)}">
+    <article class="listing-card" role="button" tabindex="0" data-id="${esc(item.id)}" aria-label="${esc(item.title)}, ${won(item.price)}원${meta ? `, ${esc(meta)}` : ''}">
       <div class="card-thumb">
-        <span class="badge" data-grade="${esc(item.condition)}">${esc(item.condition)}</span>
+        ${item.condition ? `<span class="badge" data-grade="${esc(item.condition)}">${esc(item.condition)}</span>` : ''}
         <img src="${esc(item.image)}" alt="${esc(item.title)} 상품 이미지" loading="lazy">
       </div>
       <div class="card-body">
@@ -695,8 +752,7 @@ function cardHTML(item) {
         <p class="card-price">${won(item.price)}<span class="won">원</span></p>
         <div class="card-foot">
           <span class="region-time">
-            <span class="region">${esc(item.region)}</span>
-            <span class="dot">·</span>
+            ${item.region ? `<span class="region">${esc(item.region)}</span><span class="dot">·</span>` : ''}
             <span>${timeAgo(item.postedAt)}</span>
           </span>
           <span class="card-likes">${heartIcon(false)}<span>${likeCount(item)}</span></span>
@@ -713,9 +769,6 @@ function render() {
   els.count.innerHTML = `총 <strong>${list.length}</strong>개`;
 
   els.title.textContent = state.category === '전체' ? '전체 매물' : state.category;
-  els.sub.textContent = state.query.trim()
-    ? `‘${state.query.trim()}’ 검색 결과`
-    : '중고 음향기기와 악기를 한자리에서';
 
   $$('.chip').forEach((chip) => {
     const set = chip.dataset.filter === 'condition' ? state.conditions : state.trades;
@@ -746,7 +799,6 @@ function closeModal(el) {
   el.setAttribute('aria-hidden', 'true');
   if (el === els.authModal) {
     pendingIntent = null;
-    els.authNotice.hidden = true;
   }
   if (!document.querySelector('.modal.is-open')) {
     document.body.style.overflow = '';
@@ -758,8 +810,8 @@ function closeModal(el) {
 
 function specRows(item) {
   const specs = Array.isArray(item.specs) ? item.specs.slice() : [];
-  specs.push(['거래 지역', item.region]);
-  specs.push(['거래 방식', item.trade.join(', ')]);
+  if (item.region) specs.push(['거래 지역', item.region]);
+  if (item.trade && item.trade.length) specs.push(['거래 방식', item.trade.join(', ')]);
   return specs.map(([label, value]) => (
     `<div class="spec-row"><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`
   )).join('');
@@ -778,9 +830,9 @@ function detailHTML(item) {
       <h2 class="detail-title" id="detail-title">${esc(item.title)}</h2>
       <p class="detail-price">${won(item.price)}<span class="won">원</span></p>
       <div class="detail-tags">
-        <span class="detail-tag is-grade">${esc(item.condition)}</span>
-        ${item.trade.map((t) => `<span class="detail-tag">${esc(t)}</span>`).join('')}
-        <span class="detail-tag">${esc(item.region)}</span>
+        ${item.condition ? `<span class="detail-tag is-grade">${esc(item.condition)}</span>` : ''}
+        ${(item.trade || []).map((t) => `<span class="detail-tag">${esc(t)}</span>`).join('')}
+        ${item.region ? `<span class="detail-tag">${esc(item.region)}</span>` : ''}
       </div>
 
       <dl class="spec-list">${specRows(item)}</dl>
@@ -879,26 +931,10 @@ function showChatBox() {
 
 /* --------------------------------------------------------------------- auth */
 
-function setAuthTab(tab) {
-  const isLogin = tab === 'login';
-  els.tabLogin.classList.toggle('is-active', isLogin);
-  els.tabSignup.classList.toggle('is-active', !isLogin);
-  els.tabLogin.setAttribute('aria-selected', String(isLogin));
-  els.tabSignup.setAttribute('aria-selected', String(!isLogin));
-  els.loginForm.hidden = !isLogin;
-  els.signupForm.hidden = isLogin;
-  els.loginError.hidden = true;
-  els.signupError.hidden = true;
-}
-
-function showAuth(notice) {
-  els.authNotice.hidden = !notice;
-  els.authNotice.textContent = notice || '';
-  setAuthTab('login');
-  els.loginForm.reset();
-  els.signupForm.reset();
+function showAuth() {
   openModal(els.authModal);
-  setTimeout(() => els.loginForm.querySelector('input:not([type=hidden])').focus(), 80);
+  const kakao = $('#kakao-login');
+  if (kakao) setTimeout(() => kakao.focus(), 60);
 }
 
 function renderHeader() {
@@ -930,51 +966,6 @@ function loginUser(user, message) {
   }
 }
 
-function handleLogin(event) {
-  event.preventDefault();
-  const email = $('#login-email').value.trim();
-  const password = $('#login-password').value;
-
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    els.loginError.textContent = '올바른 이메일 주소를 입력해 주세요.';
-    els.loginError.hidden = false;
-    $('#login-email').focus();
-    return;
-  }
-  if (!password) {
-    els.loginError.textContent = '비밀번호를 입력해 주세요.';
-    els.loginError.hidden = false;
-    $('#login-password').focus();
-    return;
-  }
-
-  const name = email.split('@')[0].slice(0, 10);
-  loginUser({ name, email, provider: 'email' });
-}
-
-function handleSignup(event) {
-  event.preventDefault();
-  const name = $('#signup-name').value.trim();
-  const email = $('#signup-email').value.trim();
-  const password = $('#signup-password').value;
-  const password2 = $('#signup-password2').value;
-  const agree = $('#signup-agree').checked;
-
-  const fail = (message, field) => {
-    els.signupError.textContent = message;
-    els.signupError.hidden = false;
-    if (field) field.focus();
-  };
-
-  if (name.length < 2) return fail('닉네임을 2자 이상 입력해 주세요.', $('#signup-name'));
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail('올바른 이메일 주소를 입력해 주세요.', $('#signup-email'));
-  if (password.length < 8) return fail('비밀번호는 8자 이상이어야 합니다.', $('#signup-password'));
-  if (password !== password2) return fail('비밀번호가 일치하지 않습니다.', $('#signup-password2'));
-  if (!agree) return fail('이용약관 및 개인정보처리방침에 동의해 주세요.', $('#signup-agree'));
-
-  loginUser({ name, email, provider: 'email' }, `${name}님, 가입이 완료되었습니다.`);
-}
-
 function loginWithProvider(provider) {
   loginUser(
     { name: '사운드러버', email: 'soundlover@soundyard.kr', provider },
@@ -984,20 +975,157 @@ function loginWithProvider(provider) {
 
 /* --------------------------------------------------------------------- sell */
 
+const PHOTO_MAX_EDGE = 1200;
+const PHOTO_QUALITY = 0.8;
+const PHOTO_MAX_BYTES = 20 * 1024 * 1024;
+
+function formatBytes(bytes) {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0KB';
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+  return `${Math.max(1, Math.round(bytes / 1024))}KB`;
+}
+
+function dataUrlBytes(dataUrl) {
+  const base64 = String(dataUrl).split(',')[1] || '';
+  const padding = base64.endsWith('==') ? 2 : base64.endsWith('=') ? 1 : 0;
+  return Math.max(0, Math.floor((base64.length * 3) / 4) - padding);
+}
+
+function loadImageFile(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => resolve({ img, url });
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('이미지 파일을 읽을 수 없습니다.'));
+    };
+    img.src = url;
+  });
+}
+
+/* 브라우저 canvas로 긴 변 1200px까지 줄이고 WebP(0.8)로 변환한다. */
+async function compressPhoto(file) {
+  const { img, url } = await loadImageFile(file);
+  const width0 = img.naturalWidth || img.width;
+  const height0 = img.naturalHeight || img.height;
+  if (!width0 || !height0) {
+    URL.revokeObjectURL(url);
+    throw new Error('이미지 크기를 확인할 수 없습니다.');
+  }
+
+  const scale = Math.min(1, PHOTO_MAX_EDGE / Math.max(width0, height0));
+  const width = Math.max(1, Math.round(width0 * scale));
+  const height = Math.max(1, Math.round(height0 * scale));
+
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  /* 투명 PNG도 WebP/JPEG에서 검게 나오지 않도록 흰 배경을 깐다 */
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, width, height);
+  ctx.drawImage(img, 0, 0, width, height);
+  URL.revokeObjectURL(url);
+
+  let dataUrl = canvas.toDataURL('image/webp', PHOTO_QUALITY);
+  let type = 'image/webp';
+  if (!dataUrl.startsWith('data:image/webp')) {
+    dataUrl = canvas.toDataURL('image/jpeg', PHOTO_QUALITY);
+    type = 'image/jpeg';
+  }
+
+  return {
+    dataUrl,
+    type,
+    width,
+    height,
+    originalBytes: file.size,
+    bytes: dataUrlBytes(dataUrl),
+    fileName: file.name
+  };
+}
+
+function setPhotoStatus(message) {
+  els.photoStatus.hidden = !message;
+  els.photoStatus.textContent = message || '';
+}
+
+function resetPhoto() {
+  pendingPhoto = null;
+  photoBusy = false;
+  els.sellPhoto.value = '';
+  els.photoPreview.hidden = true;
+  els.photoPreviewImg.removeAttribute('src');
+  els.photoDrop.hidden = false;
+  els.photoRemove.hidden = true;
+  setPhotoStatus('');
+}
+
+function showPhotoResult(photo) {
+  pendingPhoto = photo;
+  els.photoPreviewImg.src = photo.dataUrl;
+  els.photoPreview.hidden = false;
+  els.photoDrop.hidden = true;
+
+  const saving = photo.originalBytes
+    ? Math.round((1 - photo.bytes / photo.originalBytes) * 100)
+    : 0;
+  const label = photo.type === 'image/webp' ? 'WebP' : 'JPEG (WebP 미지원 브라우저)';
+  const dimension = `${photo.width}×${photo.height}`;
+  const change = saving > 0
+    ? `${formatBytes(photo.originalBytes)} → ${formatBytes(photo.bytes)} (${saving}% 감소)`
+    : `${formatBytes(photo.bytes)}`;
+  setPhotoStatus(`${label} 변환 완료 · ${change} · ${dimension}px`);
+}
+
+async function handlePhotoChange(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  els.sellPhoto.value = '';
+  if (!file.type.startsWith('image/')) {
+    setPhotoStatus('');
+    els.sellError.textContent = '이미지 파일만 첨부할 수 있습니다.';
+    els.sellError.hidden = false;
+    return;
+  }
+  if (file.size > PHOTO_MAX_BYTES) {
+    els.sellError.textContent = `사진 용량이 너무 큽니다. ${formatBytes(PHOTO_MAX_BYTES)} 이하 파일을 선택해 주세요.`;
+    els.sellError.hidden = false;
+    return;
+  }
+
+  els.sellError.hidden = true;
+  photoBusy = true;
+  els.photoDrop.classList.add('is-busy');
+  setPhotoStatus('사진을 WebP로 압축하는 중…');
+
+  try {
+    const photo = await compressPhoto(file);
+    showPhotoResult(photo);
+  } catch (err) {
+    resetPhoto();
+    els.sellError.textContent = err && err.message ? err.message : '사진을 변환하지 못했습니다. 다른 사진으로 시도해 주세요.';
+    els.sellError.hidden = false;
+  } finally {
+    photoBusy = false;
+    els.photoDrop.classList.remove('is-busy');
+  }
+}
+
 function openSell() {
   if (!state.user) {
     pendingIntent = 'sell';
-    showAuth('판매하기는 로그인 후 이용할 수 있습니다.');
+    showAuth();
+    toast('로그인 후 판매할 수 있습니다.');
     return;
   }
   els.sellForm.reset();
   els.sellError.hidden = true;
-  els.sellDesc.value = '';
-  els.descCount.textContent = '0';
-  sellCondition = 'A급';
-  $$('.segment', $('#sell-condition')).forEach((seg) => {
-    seg.setAttribute('aria-checked', String(seg.dataset.value === sellCondition));
-  });
+  resetPhoto();
   openModal(els.sellModal);
 }
 
@@ -1012,9 +1140,7 @@ function handleSell(event) {
   const category = els.sellCategory.value;
   const title = $('#sell-title').value.trim();
   const price = Number(els.sellPrice.value.replace(/\D/g, ''));
-  const region = $('#sell-region').value.trim();
-  const desc = els.sellDesc.value.trim();
-  const trade = $$('input[name="trade"]:checked', els.sellForm).map((input) => input.value);
+  const contact = els.sellContact.value.trim();
 
   const fail = (message, field) => {
     els.sellError.textContent = message;
@@ -1023,10 +1149,10 @@ function handleSell(event) {
   };
 
   if (!category) return fail('카테고리를 선택해 주세요.', els.sellCategory);
-  if (title.length < 2) return fail('제목을 2자 이상 입력해 주세요.', $('#sell-title'));
+  if (title.length < 2) return fail('품명을 2자 이상 입력해 주세요.', $('#sell-title'));
   if (!price) return fail('가격을 입력해 주세요.', els.sellPrice);
-  if (!region) return fail('거래 지역을 입력해 주세요.', $('#sell-region'));
-  if (trade.length === 0) return fail('거래 방식을 하나 이상 선택해 주세요.');
+  if (contact.length < 5) return fail('연락처를 입력해 주세요.', els.sellContact);
+  if (photoBusy) return fail('사진 변환이 끝난 뒤에 등록해 주세요.', els.sellPhoto);
 
   const item = {
     id: `u-${Date.now()}`,
@@ -1034,9 +1160,10 @@ function handleSell(event) {
     category,
     brand: '개인 판매',
     price,
-    condition: sellCondition,
-    trade,
-    region,
+    condition: '',
+    trade: [],
+    region: '',
+    contact,
     postedAt: Date.now(),
     likes: 0,
     views: 0,
@@ -1048,21 +1175,30 @@ function handleSell(event) {
     },
     specs: [
       ['카테고리', category],
-      ['구성품', desc ? '상품 설명 참고' : '미기재'],
-      ['시리얼·박스', '미기재']
+      ['연락처', contact]
     ],
-    desc: desc || '상세 설명이 등록되지 않았습니다. 판매자에게 채팅으로 문의해 주세요.',
-    image: CATEGORY_IMAGES[category] || CATEGORY_IMAGES[CAT.ETC],
+    desc: '판매자가 상세 설명을 남기지 않았습니다. 연락처로 문의해 주세요.',
+    image: pendingPhoto ? pendingPhoto.dataUrl : (CATEGORY_IMAGES[category] || CATEGORY_IMAGES[CAT.ETC]),
+    photoType: pendingPhoto ? pendingPhoto.type : null,
     custom: true
   };
 
   state.custom.unshift(item);
-  writeJSON('sy_custom_listings', state.custom);
+  const stored = writeJSON('sy_custom_listings', state.custom);
+  if (!stored) {
+    state.custom.shift();
+    fail('브라우저 저장 공간이 부족해 등록하지 못했습니다. 사진을 작게 바꾸거나 다른 매물을 정리한 뒤 다시 시도해 주세요.');
+    return;
+  }
+
+  const photoSummary = pendingPhoto && pendingPhoto.type === 'image/webp'
+    ? ` (사진 WebP ${formatBytes(pendingPhoto.bytes)})`
+    : '';
 
   closeModal(els.sellModal);
   resetAll(true);
   render();
-  toast('매물이 등록되었습니다.');
+  toast(`매물이 등록되었습니다.${photoSummary}`);
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
@@ -1074,6 +1210,107 @@ function handleSell(event) {
       newCardTimer = setTimeout(() => card.classList.remove('is-new'), 2600);
     }
   });
+}
+
+/* --------------------------------------------------------- inquiry board */
+
+function formatInquiryDate(ts) {
+  return new Date(ts).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' });
+}
+
+function renderInquiries() {
+  const admin = state.admin;
+  const list = state.inquiries.slice().sort((a, b) => b.createdAt - a.createdAt);
+
+  els.adminState.textContent = admin
+    ? '관리자 열람 중 · 문의 제목과 내용이 모두 표시됩니다'
+    : '일반 이용자 · 문의 내용은 관리자만 열람할 수 있습니다';
+  els.adminBar.classList.toggle('is-admin', admin);
+  els.adminToggle.textContent = admin ? '관리자 로그아웃' : '관리자 확인';
+  els.adminForm.hidden = true;
+  els.adminError.hidden = true;
+
+  if (!list.length) {
+    els.inquiryList.innerHTML = '<li class="inquiry-empty">아직 등록된 문의가 없습니다.</li>';
+    return;
+  }
+
+  els.inquiryList.innerHTML = list.map((item) => {
+    if (!admin) {
+      return `
+        <li class="inquiry-item is-locked">
+          <div class="inquiry-row">
+            <span class="inquiry-lock" aria-hidden="true">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="5" y="10" width="14" height="10" rx="2" stroke="#6B7280" stroke-width="1.8"/><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="#6B7280" stroke-width="1.8"/></svg>
+            </span>
+            <span class="inquiry-title">비밀글입니다 (관리자만 열람 가능)</span>
+            <span class="inquiry-date">${formatInquiryDate(item.createdAt)}</span>
+          </div>
+          <p class="inquiry-meta">작성자 비공개</p>
+        </li>`;
+    }
+    return `
+      <li class="inquiry-item is-admin-view">
+        <div class="inquiry-row">
+          <span class="inquiry-title">${esc(item.title)}</span>
+          <span class="inquiry-date">${formatInquiryDate(item.createdAt)}</span>
+        </div>
+        <p class="inquiry-meta">${esc(item.contact)} · 관리자 열람</p>
+        <p class="inquiry-body">${esc(item.body)}</p>
+      </li>`;
+  }).join('');
+}
+
+function openInquiry() {
+  els.inquiryForm.hidden = true;
+  els.inquiryError.hidden = true;
+  els.inquiryWriteToggle.hidden = false;
+  renderInquiries();
+  openModal(els.inquiryModal);
+}
+
+function submitInquiry(event) {
+  event.preventDefault();
+  const title = $('#inquiry-title').value.trim();
+  const contact = $('#inquiry-contact').value.trim();
+  const body = $('#inquiry-body').value.trim();
+
+  const fail = (message, field) => {
+    els.inquiryError.textContent = message;
+    els.inquiryError.hidden = false;
+    if (field) field.focus();
+  };
+
+  if (title.length < 2) return fail('제목을 2자 이상 입력해 주세요.', $('#inquiry-title'));
+  if (contact.length < 2) return fail('작성자 또는 연락처를 입력해 주세요.', $('#inquiry-contact'));
+  if (body.length < 2) return fail('문의 내용을 입력해 주세요.', $('#inquiry-body'));
+
+  state.inquiries.unshift({
+    id: `q-${Date.now()}`,
+    title,
+    contact,
+    body,
+    createdAt: Date.now()
+  });
+  if (!writeJSON(INQUIRY_KEY, state.inquiries)) {
+    state.inquiries.shift();
+    return fail('브라우저 저장 공간이 부족해 문의를 등록하지 못했습니다.');
+  }
+
+  els.inquiryForm.reset();
+  els.inquiryForm.hidden = true;
+  els.inquiryWriteToggle.hidden = false;
+  els.inquiryError.hidden = true;
+  renderInquiries();
+  toast('문의가 등록되었습니다. 관리자만 열람할 수 있습니다.');
+}
+
+function setAdmin(on) {
+  state.admin = on;
+  writeAdminSession(on);
+  els.adminPassword.value = '';
+  renderInquiries();
+  toast(on ? '관리자로 전환되었습니다. 문의 내용을 열람할 수 있습니다.' : '관리자 모드를 종료했습니다.');
 }
 
 /* ------------------------------------------------------------------ controls */
@@ -1186,7 +1423,8 @@ function init() {
     if (event.target.closest('[data-chat]')) {
       if (!state.user) {
         pendingIntent = 'chat';
-        showAuth('채팅 문의는 로그인 후 이용할 수 있습니다.');
+        showAuth();
+        toast('로그인 후 판매자에게 문의할 수 있습니다.');
         return;
       }
       const box = $('#chat-box');
@@ -1215,18 +1453,13 @@ function init() {
   });
 
   /* auth */
-  $('#auth-btn').addEventListener('click', () => showAuth(''));
+  $('#auth-btn').addEventListener('click', () => showAuth());
   els.logoutBtn.addEventListener('click', () => {
     state.user = null;
     try { localStorage.removeItem('sy_user'); } catch (err) { /* noop */ }
     renderHeader();
     toast('로그아웃되었습니다.');
   });
-
-  els.tabLogin.addEventListener('click', () => setAuthTab('login'));
-  els.tabSignup.addEventListener('click', () => setAuthTab('signup'));
-  els.loginForm.addEventListener('submit', handleLogin);
-  els.signupForm.addEventListener('submit', handleSignup);
 
   $$('.social-btn').forEach((btn) => {
     btn.addEventListener('click', () => loginWithProvider(btn.dataset.provider));
@@ -1236,17 +1469,55 @@ function init() {
   els.sellBtn.addEventListener('click', openSell);
   els.sellForm.addEventListener('submit', handleSell);
   els.sellPrice.addEventListener('input', formatPriceInput);
-  els.sellDesc.addEventListener('input', () => {
-    els.descCount.textContent = String(els.sellDesc.value.length);
+  els.sellPhoto.addEventListener('change', handlePhotoChange);
+  els.photoRemove.addEventListener('click', () => {
+    resetPhoto();
+    els.sellPhoto.focus();
   });
 
-  $$('.segment', $('#sell-condition')).forEach((seg) => {
-    seg.addEventListener('click', () => {
-      sellCondition = seg.dataset.value;
-      $$('.segment', $('#sell-condition')).forEach((s) => {
-        s.setAttribute('aria-checked', String(s === seg));
-      });
-    });
+  /* inquiry board */
+  $('#inquiry-btn').addEventListener('click', openInquiry);
+  $('#footer-inquiry').addEventListener('click', (event) => {
+    event.preventDefault();
+    openInquiry();
+  });
+  els.inquiryWriteToggle.addEventListener('click', () => {
+    els.inquiryForm.hidden = false;
+    els.inquiryWriteToggle.hidden = true;
+    els.inquiryError.hidden = true;
+    $('#inquiry-title').focus();
+  });
+  $('#inquiry-cancel').addEventListener('click', () => {
+    els.inquiryForm.reset();
+    els.inquiryForm.hidden = true;
+    els.inquiryWriteToggle.hidden = false;
+    els.inquiryError.hidden = true;
+  });
+  els.inquiryForm.addEventListener('submit', submitInquiry);
+
+  els.adminToggle.addEventListener('click', () => {
+    if (state.admin) {
+      setAdmin(false);
+      return;
+    }
+    els.adminForm.hidden = !els.adminForm.hidden;
+    els.adminError.hidden = true;
+    if (!els.adminForm.hidden) els.adminPassword.focus();
+  });
+  els.adminForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    if (els.adminPassword.value === ADMIN_PASSWORD) {
+      setAdmin(true);
+      return;
+    }
+    els.adminError.textContent = '비밀번호가 맞지 않습니다.';
+    els.adminError.hidden = false;
+    els.adminPassword.select();
+  });
+  $('#admin-cancel').addEventListener('click', () => {
+    els.adminForm.hidden = true;
+    els.adminError.hidden = true;
+    els.adminPassword.value = '';
   });
 
   /* modal close */
