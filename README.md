@@ -63,8 +63,8 @@ soundyard/
 
 ```js
 const KAKAO_CONFIG = {
-  jsKey: '',      // 카카오 디벨로퍼스 > 앱 키 > JavaScript 키
-  restKey: '',    // 같은 화면의 REST API 키 (정적 페이지의 인가 코드 교환용)
+  jsKey: '',      // 카카오 디벨로퍼스 > 앱 키 > JavaScript 키 (SDK 초기화·인가·토큰 교환 client_id)
+  restKey: '',    // REST API 키 — 현재 로그인 흐름에서는 쓰지 않습니다
   redirectUri: '' // 비우면 현재 페이지 주소 사용
 };
 ```
@@ -82,14 +82,14 @@ Kakao JS SDK v2에는 v1의 `Kakao.Auth.login()`이 없고 토큰 발급도 하�
 3. `Kakao.Auth.setAccessToken(access_token)` → `Kakao.API.request({ url: '/v2/user/me' })` 로 회원번호·닉네임 조회
 4. 닉네임으로 `sy_user`에 저장하고 주소창의 `code`/`state`를 지웁니다. 로그아웃 시 `Kakao.Auth.logout()`으로 토큰도 폐기합니다.
 
-토큰 교환의 `client_id`는 **REST API 키**입니다(JavaScript 키 아님). JavaScript 키만으로는 교환이 되지 않으므로 `restKey`가 필요하고, 비어 있으면 로그인 버튼이 콘솔 안내와 함께 중단됩니다.
+토큰 교환의 `client_id`는 JavaScript 키(`KAKAO_CONFIG.jsKey`)입니다. `Kakao.Auth.authorize()`가 그 키로 인가 코드를 발급하므로 교환도 같은 키로 해야 하며, REST API 키를 넣으면 `401 invalid_client / Bad client credentials`(KOE010)로 거절됩니다. 교환 요청에는 `client_secret`을 보내지 않으므로 콘솔의 Client Secret은 **사용 안 함**이어야 합니다.
 
 ### 카카오 디벨로퍼스에서 해야 할 설정
 
 | 항목 | 값/상태 |
 | --- | --- |
-| 앱 키 > JavaScript 키 | `KAKAO_CONFIG.jsKey` |
-| 앱 키 > REST API 키 | `KAKAO_CONFIG.restKey` |
+| 앱 키 > JavaScript 키 | `KAKAO_CONFIG.jsKey` (SDK·인가·토큰 교환 모두 사용) |
+| 앱 키 > REST API 키 | 사용하지 않음 (`KAKAO_CONFIG.restKey`에 보관만) |
 | 플랫폼 > Web > 사이트 도메인 | `https://doubdub.github.io` (로컬 테스트 시 `http://localhost:8000`도 추가) |
 | 카카오 로그인 > Redirect URI | `https://doubdub.github.io/soundyard/` — 등록 값과 요청 값이 **정확히** 같아야 함 (`index.html` 없이 디렉터리 주소) |
 | 카카오 로그인 > 일반 | 카카오 로그인 **활성화 ON** |

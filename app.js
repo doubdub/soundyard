@@ -5,10 +5,10 @@
 'use strict';
 
 /* ============================================================ 카카오 설정
-   1) jsKey   : 카카오 디벨로퍼스 > 앱 키 > JavaScript 키
-   2) restKey : 같은 화면의 REST API 키.
-                순수 정적 페이지에서는 브라우저가 인가 코드를 토큰으로 직접
-                교환해야 하므로 REST API 키가 필요합니다. (Client Secret 사용 안 함)
+   1) jsKey   : 카카오 디벨로퍼스 > 앱 키 > JavaScript 키.
+                Kakao.init()과 Kakao.Auth.authorize()에 쓰고, 돌아온 인가 코드를
+                토큰으로 교환할 때도 이 키를 client_id로 보냅니다. (Client Secret 사용 안 함)
+   2) restKey : REST API 키. 현재 로그인 흐름에서는 쓰지 않습니다(참고용 보관).
    3) redirectUri : 비워 두면 현재 페이지 주소(예: https://doubdub.github.io/soundyard/)를
                 사용합니다. 카카오 콘솔 > 카카오 로그인 > Redirect URI에 같은 값을 등록하세요.
    jsKey 가 비어 있으면 기존처럼 데모 계정(사운드러버)으로 로그인합니다.
@@ -1099,7 +1099,7 @@ function kakaoSetupGuide(reason) {
     `[SoundYard] 카카오 로그인 실패: ${reason}`,
     '카카오 디벨로퍼스 설정을 확인하세요.',
     `  1) JavaScript 키 → app.js KAKAO_CONFIG.jsKey (현재 ${KAKAO_CONFIG.jsKey ? '입력됨' : '비어 있음'})`,
-    `  2) REST API 키 → app.js KAKAO_CONFIG.restKey (현재 ${KAKAO_CONFIG.restKey ? '입력됨' : '비어 있음'})`,
+    `  2) 토큰 교환 client_id는 JavaScript 키 사용 (REST API 키 입력 여부: ${KAKAO_CONFIG.restKey ? '입력됨' : '비어 있음'} · 교환에는 불필요)`,
     `  3) 플랫폼 > Web > 사이트 도메인에 ${kakaoRedirectUri()} 의 오리진 등록`,
     `  4) 카카오 로그인 > Redirect URI에 ${kakaoRedirectUri()} 를 정확히 같은 값으로 등록`,
     '  5) 카카오 로그인 > 일반 > 카카오 로그인 활성화 ON',
@@ -1124,14 +1124,9 @@ function initKakaoMode() {
 
   console.info('[SoundYard] 카카오 로그인: 실제 SDK 모드', {
     redirectUri: kakaoRedirectUri(),
-    restKey: Boolean(KAKAO_CONFIG.restKey)
+    tokenClientId: 'jsKey'
   });
 
-  if (!KAKAO_CONFIG.restKey) {
-    console.warn('[SoundYard] KAKAO_CONFIG.restKey가 비어 있어 인가 코드를 토큰으로 교환할 수 없습니다. REST API 키를 입력하세요.');
-    setKakaoNote('카카오 로그인 준비 중 · REST API 키가 필요합니다', 'warn');
-    return;
-  }
   setKakaoNote('');
 }
 
@@ -1176,12 +1171,6 @@ function startKakaoLogin() {
     showKakaoError('카카오 SDK를 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.');
     return;
   }
-  if (!KAKAO_CONFIG.restKey) {
-    showKakaoError('REST API 키(KAKAO_CONFIG.restKey)가 없어 로그인을 완료할 수 없습니다. app.js 상단 설정을 확인해 주세요.');
-    kakaoSetupGuide('REST API 키 미등록');
-    return;
-  }
-
   showKakaoError('');
   saveKakaoIntent();
   try {
@@ -1192,11 +1181,12 @@ function startKakaoLogin() {
   }
 }
 
-/* 인가 코드 → 토큰 교환 (정적 페이지라 브라우저에서 직접 호출, Client Secret 꺼진 앱 전용) */
+/* 인가 코드 → 토큰 교환 (정적 페이지라 브라우저에서 직접 호출, Client Secret 꺼진 앱 전용)
+   Kakao.Auth.authorize()가 JavaScript 키로 인가 코드를 발급하므로 토큰 교환도 같은 JavaScript 키를 client_id로 보낸다. */
 async function requestKakaoToken(code) {
   const body = new URLSearchParams({
     grant_type: 'authorization_code',
-    client_id: KAKAO_CONFIG.restKey,
+    client_id: KAKAO_CONFIG.jsKey,
     redirect_uri: kakaoRedirectUri(),
     code
   });
