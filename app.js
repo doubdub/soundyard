@@ -419,6 +419,13 @@ const INQUIRY_KEY = 'sy_inquiries';
 const ADMIN_SESSION_KEY = 'sy_admin_session';
 /* 데모용 관리자 비밀번호. 실제 서비스에서는 Cloudflare Workers + D1 인증으로 교체 (README 참고) */
 const ADMIN_PASSWORD = 'admin1234';
+/* 로그인 모달의 '관리자 테스트 로그인'으로 바로 들어가는 데모 관리자 계정 */
+const ADMIN_USER = {
+  name: '관리자',
+  email: 'admin@soundyard.kr',
+  provider: '관리자 테스트',
+  role: 'admin'
+};
 
 function readAdminSession() {
   try {
@@ -458,7 +465,8 @@ const state = {
     ...item,
     image: item.image || CATEGORY_IMAGES[item.category] || CATEGORY_IMAGES[CAT.ETC]
   })),
-  inquiries: readJSON(INQUIRY_KEY, INQUIRY_SEED)
+  inquiries: readJSON(INQUIRY_KEY, INQUIRY_SEED),
+  deleted: new Set(readJSON('sy_deleted_listings', []))
 };
 
 let currentDetailId = null;
@@ -517,7 +525,18 @@ const els = {
 };
 
 function allListings() {
-  return [...state.custom, ...seedListings];
+  return [...state.custom, ...seedListings.filter((item) => !state.deleted.has(item.id))];
+}
+
+function isAdminUser() {
+  return Boolean(state.user && state.user.role === 'admin');
+}
+
+/* 관리자는 모든 매물, 일반 회원은 본인이 등록한 매물만 삭제할 수 있다. */
+function canDeleteListing(item) {
+  if (!state.user || !item) return false;
+  if (state.user.role === 'admin') return true;
+  return Boolean(item.custom && item.seller && item.seller.name === state.user.name);
 }
 
 function likeCount(item) {
@@ -643,6 +662,13 @@ function closeModal(el) {
 function detailHTML(item) {
   const wished = state.wishlist.has(item.id);
   const initial = item.seller.name.trim().charAt(0) || '판';
+  const manageHTML = canDeleteListing(item)
+    ? `
+      <div class="detail-manage">
+        <button type="button" class="btn-delete" data-delete>매물 삭제</button>
+        <span class="detail-manage-note">${item.custom ? '내가 등록한 매물' : '관리자 권한'}</span>
+      </div>`
+    : '';
 
   return `
     <div class="detail-media">
@@ -671,6 +697,8 @@ function detailHTML(item) {
         </button>
         <button type="button" class="btn btn-chat" data-chat>채팅 문의</button>
       </div>
+
+      ${manageHTML}
 
       <div class="chat-box" id="chat-box" hidden>
         <label for="chat-message">판매자에게 보낼 메시지</label>
@@ -751,6 +779,37 @@ function showChatBox() {
   }
 }
 
+/* ------------------------------------------------------------------ delete */
+
+function deleteListing(id) {
+  const item = allListings().find((x) => x.id === id);
+  if (!item) return;
+  if (!canDeleteListing(item)) {
+    toast('삭제 권한이 없습니다.');
+    return;
+  }
+  if (!window.confirm(`“${item.title}” 매물을 삭제할까요?`)) return;
+
+  if (item.custom) {
+    const next = state.custom.filter((x) => x.id !== id);
+    if (!writeJSON('sy_custom_listings', next)) {
+      toast('브라우저 저장 공간이 부족해 삭제하지 못했습니다.');
+      return;
+    }
+    state.custom = next;
+  } else {
+    state.deleted.add(id);
+    writeJSON('sy_deleted_listings', Array.from(state.deleted));
+  }
+
+  if (state.wishlist.delete(id)) writeJSON('sy_wishlist', Array.from(state.wishlist));
+
+  closeModal(els.detailModal);
+  currentDetailId = null;
+  render();
+  toast('매물이 삭제되었습니다.');
+}
+
 /* --------------------------------------------------------------------- auth */
 
 function showAuth() {
@@ -769,6 +828,7 @@ function renderHeader() {
     els.userName.textContent = name;
     els.userAvatar.textContent = name.trim().charAt(0) || '회';
   }
+  els.userMenu.classList.toggle('is-admin', loggedIn && isAdminUser());
 }
 
 function loginUser(user, message) {
@@ -786,6 +846,12 @@ function loginUser(user, message) {
   } else if (intent === 'chat' && els.detailModal.classList.contains('is-open')) {
     setTimeout(showChatBox, 120);
   }
+}
+
+function loginAsAdmin() {
+  loginUser({ ...ADMIN_USER }, '관리자 계정으로 로그인되었습니다. (테스트)');
+  if (!state.admin) setAdmin(true);
+  else renderInquiries();
 }
 
 function loginWithProvider(provider) {
@@ -1040,9 +1106,12 @@ function renderInquiries() {
   const list = state.inquiries.slice().sort((a, b) => b.createdAt - a.createdAt);
 
   els.adminState.textContent = admin
-    ? '관리자 열람 중 · 문의 제목과 내용이 모두 표시됩니다'
+    ? (isAdminUser()
+      ? '관리자 계정으로 로그인됨 · 문의 제목과 내용이 모두 표시됩니다'
+      : '관리자 열람 중 · 문의 제목과 내용이 모두 표시됩니다')
     : '일반 이용자 · 문의 내용은 관리자만 열람할 수 있습니다';
   els.adminBar.classList.toggle('is-admin', admin);
+  els.adminToggle.hidden = isAdminUser();
   els.adminToggle.textContent = admin ? '관리자 로그아웃' : '관리자 확인';
   els.adminForm.hidden = true;
   els.adminError.hidden = true;
@@ -1079,6 +1148,10 @@ function renderInquiries() {
 }
 
 function openInquiry() {
+  if (isAdminUser() && !state.admin) {
+    state.admin = true;
+    writeAdminSession(true);
+  }
   els.inquiryForm.hidden = true;
   els.inquiryError.hidden = true;
   els.inquiryWriteToggle.hidden = false;
@@ -1235,6 +1308,11 @@ function init() {
       return;
     }
 
+    if (event.target.closest('[data-delete]')) {
+      if (currentDetailId) deleteListing(currentDetailId);
+      return;
+    }
+
     if (event.target.closest('[data-chat]')) {
       if (!state.user) {
         pendingIntent = 'chat';
@@ -1269,9 +1347,15 @@ function init() {
 
   /* auth */
   $('#auth-btn').addEventListener('click', () => showAuth());
+  $('#admin-login').addEventListener('click', loginAsAdmin);
   els.logoutBtn.addEventListener('click', () => {
     state.user = null;
     try { localStorage.removeItem('sy_user'); } catch (err) { /* noop */ }
+    if (state.admin) {
+      state.admin = false;
+      writeAdminSession(false);
+      renderInquiries();
+    }
     renderHeader();
     toast('로그아웃되었습니다.');
   });
