@@ -15,8 +15,8 @@
    ======================================================================== */
 
 const KAKAO_CONFIG = {
-  jsKey: '',
-  restKey: '',
+  jsKey: '27139f83a3a49f9970fc559b488aa181',
+  restKey: 'c0fbe9568155ae1db86773f41e5d6485',
   redirectUri: ''
 };
 
