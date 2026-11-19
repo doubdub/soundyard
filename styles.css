@@ -383,36 +383,11 @@ img { max-width: 100%; display: block; }
   object-fit: cover;
 }
 
-.badge {
-  position: absolute;
-  top: 9px;
-  left: 9px;
-  height: 22px;
-  padding: 0 7px;
-  display: inline-flex;
-  align-items: center;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.2px;
-}
-
-.badge[data-grade="S급"] { background: var(--ink); color: #fff; }
-.badge[data-grade="A급"] { background: rgba(255, 255, 255, 0.94); color: var(--ink-2); border: 1px solid var(--line); }
-.badge[data-grade="B급"] { background: rgba(255, 255, 255, 0.94); color: var(--muted); border: 1px solid var(--line); }
-
 .card-body {
   padding: 11px 13px 13px;
   display: flex;
   flex-direction: column;
   flex: 1;
-}
-
-.card-brand {
-  font-size: 11.5px;
-  color: var(--muted-2);
-  line-height: 1.2;
-  margin-bottom: 5px;
 }
 
 .card-title {
@@ -737,37 +712,6 @@ img { max-width: 100%; display: block; }
   color: #4b5563;
 }
 
-.detail-tag.is-grade {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: #fff;
-  font-weight: 700;
-}
-
-.spec-list {
-  margin-top: 20px;
-  border-top: 1px solid var(--line);
-}
-
-.spec-row {
-  display: flex;
-  gap: 12px;
-  padding: 9px 0;
-  border-bottom: 1px solid #f0f1f3;
-  font-size: 13px;
-}
-
-.spec-row dt {
-  width: 88px;
-  flex: none;
-  color: var(--muted);
-}
-
-.spec-row dd {
-  color: var(--ink);
-  line-height: 1.55;
-}
-
 .detail-desc h3,
 .detail-section h3 {
   font-size: 13.5px;
@@ -831,6 +775,17 @@ img { max-width: 100%; display: block; }
 }
 
 .seller-stats b { color: var(--ink); }
+
+.detail-contact {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.detail-contact b {
+  font-weight: 600;
+  color: var(--ink);
+}
 
 .detail-stats {
   display: flex;
@@ -1437,7 +1392,6 @@ img { max-width: 100%; display: block; }
   .card-body { padding: 10px 11px 11px; }
   .card-title { font-size: 13.5px; min-height: 39px; }
   .card-price { font-size: 15.5px; }
-  .card-brand { font-size: 11px; }
   .card-foot { font-size: 11.5px; }
 
   .modal.is-open { padding: 0; align-items: flex-end; }
@@ -1503,7 +1457,6 @@ img { max-width: 100%; display: block; }
   .category-scroll { padding: 0 14px; }
   .listing-grid { gap: 14px 10px; }
   .card-title { font-size: 13px; }
-  .badge { top: 7px; left: 7px; }
   .detail-media { padding: 16px 16px 0; }
   .detail-body { padding: 16px 16px 20px; }
 }

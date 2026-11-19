@@ -55,21 +55,13 @@ const SEED = [
     category: CAT.MIC,
     brand: 'Neumann',
     price: 1150000,
-    condition: 'A급',
     trade: ['직거래', '택배'],
     region: '서울 마포구',
     minutesAgo: 12,
     likes: 41,
     views: 812,
     seller: { name: '정오의스튜디오', joined: '2021.03', deals: 41, response: 98 },
-    specs: [
-      ['제조사', 'Neumann'],
-      ['모델명', 'TLM 103'],
-      ['구입 시기', '2023년 5월'],
-      ['구성품', '원박스, 충격방지 케이스, 시리얼 카드'],
-      ['시리얼·박스', '시리얼 카드와 박스 모두 있음']
-    ],
-    desc: '2023년 5월에 새로 구입해 개인 보컬 녹음에만 사용했습니다. 그릴 찍힘 없이 깔끔하고 본체 스크래치도 거의 없습니다.\n\n박스, 충격방지 케이스, 시리얼 카드 모두 있습니다. 마포구 합정동 직거래 또는 택배 가능하며, 택배는 선불로 보내드립니다.',
+    desc: '개인 보컬 녹음에만 사용했습니다. 그릴 찍힘 없이 깔끔하고 본체 스크래치도 거의 없습니다. 마포구 합정동 직거래 또는 택배 가능합니다.',
     image: 'assets/mic-tlm103.svg'
   },
   {
@@ -78,21 +70,13 @@ const SEED = [
     category: CAT.OUTBOARD,
     brand: 'AMS Neve',
     price: 3900000,
-    condition: 'A급',
     trade: ['직거래', '택배'],
     region: '서울 강남구',
     minutesAgo: 68,
     likes: 22,
     views: 504,
     seller: { name: '아날로그공방', joined: '2020.11', deals: 58, response: 96 },
-    specs: [
-      ['제조사', 'AMS Neve'],
-      ['모델명', '1073 SPX'],
-      ['구입 시기', '2020년 11월'],
-      ['구성품', '원박스, 매뉴얼, 전원 케이블'],
-      ['시리얼·박스', '모두 있음']
-    ],
-    desc: '2020년 말에 구입해서 스튜디오 랙에 고정으로만 사용했습니다. 노브 헤이즈나 채널 노이즈 없이 정상 작동하고, 올해 초 정식 서비스센터에서 점검받았습니다.\n\n원박스와 매뉴얼 있습니다. 강남구 신사동 직거래 선호하고, 택배는 운송비 별도로 보내드립니다.',
+    desc: '스튜디오 랙에 고정으로만 사용했습니다. 노브 헤이즈나 채널 노이즈 없이 정상 작동하고, 올해 초 정식 서비스센터에서 점검받았습니다. 강남구 신사동 직거래 선호하고 택배도 가능합니다.',
     image: 'assets/outboard-neve1073.svg'
   },
   {
@@ -101,21 +85,13 @@ const SEED = [
     category: CAT.OUTBOARD,
     brand: 'API',
     price: 780000,
-    condition: 'B급',
     trade: ['직거래', '택배'],
     region: '경기 성남시',
     minutesAgo: 180,
     likes: 18,
     views: 377,
     seller: { name: '랙마스터', joined: '2022.02', deals: 23, response: 94 },
-    specs: [
-      ['제조사', 'API'],
-      ['모델명', '512c'],
-      ['구입 시기', '2022년 2월'],
-      ['구성품', '모듈 본체, 전원 케이블'],
-      ['시리얼·박스', '박스 없음, 시리얼 스티커 확인 가능']
-    ],
-    desc: '500 시리즈 랙에 꽂아 쓰던 모듈입니다. 페이스에 미세한 기스가 몇 군데 있고 노브 상태는 깔끔합니다. 게인 노이즈나 채널 이상 없습니다.\n\n박스는 없고 모듈과 전원 케이블만 드립니다. 성남시 분당구 직거래 가능하고 택배도 됩니다.',
+    desc: '500 시리즈 랙에 꽂아 쓰던 모듈입니다. 페이스에 미세한 기스가 몇 군데 있고 노브 상태는 깔끔합니다. 게인 노이즈나 채널 이상 없습니다. 성남시 분당구 직거래, 택배도 가능합니다.',
     image: 'assets/outboard-api512.svg'
   },
   {
@@ -124,21 +100,13 @@ const SEED = [
     category: CAT.SPEAKER,
     brand: 'Genelec',
     price: 1480000,
-    condition: 'A급',
     trade: ['직거래', '택배'],
     region: '서울 용산구',
     minutesAgo: 240,
     likes: 27,
     views: 691,
     seller: { name: '모니터링랩', joined: '2021.08', deals: 19, response: 99 },
-    specs: [
-      ['제조사', 'Genelec'],
-      ['모델명', '8030C (페어)'],
-      ['구입 시기', '2021년 8월'],
-      ['구성품', '전원 케이블 2개, 원박스 2개'],
-      ['시리얼·박스', '시리얼 일치, 박스 모두 있음']
-    ],
-    desc: '페어로 2021년에 구입했습니다. 스튜디오에서만 사용했고 하우징 변색이나 우퍼 눌림 없이 상태 좋습니다.\n\n전원 케이블과 원박스 2개 모두 있습니다. 용산구 이촌동 직거래 또는 택배 가능하며, 오셔서 시연 후 거래하셔도 됩니다.',
+    desc: '페어로 스튜디오에서만 사용했습니다. 하우징 변색이나 우퍼 눌림 없이 상태 좋습니다. 용산구 이촌동 직거래 또는 택배 가능하고, 오셔서 시연 후 거래하셔도 됩니다.',
     image: 'assets/speaker-genelec8030.svg'
   },
   {
@@ -147,21 +115,13 @@ const SEED = [
     category: CAT.SPEAKER,
     brand: 'Yamaha',
     price: 620000,
-    condition: 'A급',
     trade: ['직거래', '택배'],
     region: '경기 구리시',
     minutesAgo: 1560,
     likes: 12,
     views: 205,
     seller: { name: '구리사운드', joined: '2023.11', deals: 12, response: 95 },
-    specs: [
-      ['제조사', 'Yamaha'],
-      ['모델명', 'HS8 (화이트, 페어)'],
-      ['구입 시기', '2023년 11월'],
-      ['구성품', '전원 케이블 2개, 박스 1개'],
-      ['시리얼·박스', '시리얼 확인 가능, 박스는 한쪽만']
-    ],
-    desc: '화이트 모델 페어입니다. 2023년 말에 구입해서 홈스튜디오에서 가볍게 사용했습니다. 우퍼 주변 먼지 정도만 있고 외관 상태 좋습니다.\n\n박스는 한쪽만 있고 전원 케이블은 포함입니다. 구리시 갈매동 직거래 가능하고, 택배는 착불로 보내드립니다.',
+    desc: '화이트 모델 페어입니다. 홈스튜디오에서 가볍게 사용했고, 우퍼 주변 먼지 정도만 있고 외관 상태 좋습니다. 구리시 갈매동 직거래 가능하고 택배는 착불로 보내드립니다.',
     image: 'assets/speaker-hs8.svg'
   },
   {
@@ -170,21 +130,13 @@ const SEED = [
     category: CAT.INTERFACE,
     brand: 'Universal Audio',
     price: 1290000,
-    condition: 'S급',
     trade: ['직거래', '택배'],
     region: '서울 송파구',
     minutesAgo: 25,
     likes: 35,
     views: 742,
     seller: { name: '송파레코딩', joined: '2024.01', deals: 31, response: 97 },
-    specs: [
-      ['제조사', 'Universal Audio'],
-      ['모델명', 'Apollo Twin X Duo Heritage Edition'],
-      ['구입 시기', '2024년 1월'],
-      ['구성품', '원박스, USB-C 케이블, 등록 카드'],
-      ['시리얼·박스', '모두 있음, 플러그인 미등록 상태']
-    ],
-    desc: '2024년 1월 구입한 Heritage Edition입니다. 개인 작업실에서 데스크에 고정해 사용했고 페이스 눌림이나 잭 헐거움 없습니다.\n\n원박스와 USB-C 케이블, 등록 카드 있습니다. 구입 후 플러그인은 등록하지 않았습니다. 송파구 잠실 직거래 또는 택배 가능합니다.',
+    desc: 'Heritage Edition입니다. 개인 작업실에서 데스크에 고정해 사용했고 페이스 눌림이나 잭 헐거움 없습니다. 플러그인은 등록하지 않은 상태입니다. 송파구 잠실 직거래 또는 택배 가능합니다.',
     image: 'assets/interface-apollo.svg'
   },
   {
@@ -193,21 +145,13 @@ const SEED = [
     category: CAT.INTERFACE,
     brand: 'RME',
     price: 950000,
-    condition: 'A급',
     trade: ['직거래', '택배'],
     region: '대전 유성구',
     minutesAgo: 2880,
     likes: 19,
     views: 463,
     seller: { name: '대전톤랩', joined: '2022.06', deals: 16, response: 96 },
-    specs: [
-      ['제조사', 'RME'],
-      ['모델명', 'Babyface Pro FS'],
-      ['구입 시기', '2022년 6월'],
-      ['구성품', '원박스, USB 케이블, 광출력 어댑터'],
-      ['시리얼·박스', '모두 있음']
-    ],
-    desc: '2022년에 구입해서 노트북 작업용으로 사용했습니다. 알루미늄 하우징에 생활 기스가 조금 있고, 노브와 모든 입출력은 정상입니다.\n\n박스, USB 케이블, 광출력 어댑터 포함입니다. 대전 유성구 직거래 또는 택배로 보내드립니다.',
+    desc: '노트북 작업용으로 사용했습니다. 알루미늄 하우징에 생활 기스가 조금 있고, 노브와 모든 입출력은 정상입니다. 대전 유성구 직거래 또는 택배로 보내드립니다.',
     image: 'assets/interface-babyface.svg'
   },
   {
@@ -216,21 +160,13 @@ const SEED = [
     category: CAT.MIXER,
     brand: 'Solid State Logic',
     price: 1750000,
-    condition: 'A급',
     trade: ['직거래', '택배'],
     region: '서울 마포구',
     minutesAgo: 360,
     likes: 16,
     views: 389,
     seller: { name: '합정뮤직', joined: '2021.10', deals: 27, response: 98 },
-    specs: [
-      ['제조사', 'Solid State Logic'],
-      ['모델명', 'SiX'],
-      ['구입 시기', '2021년 10월'],
-      ['구성품', '원박스, 전원 어댑터'],
-      ['시리얼·박스', '모두 있음']
-    ],
-    desc: '2021년 구입해서 홈스튜디오 메인 콘솔로 사용했습니다. 페이더 노이즈 없고 모든 채널 정상 작동합니다.\n\n원박스와 전원 어댑터 포함, 매뉴얼은 PDF로 드립니다. 마포구 서교동 직거래 가능하고 택배는 착불입니다.',
+    desc: '홈스튜디오 메인 콘솔로 사용했습니다. 페이더 노이즈 없고 모든 채널 정상 작동합니다. 마포구 서교동 직거래 가능하고 택배는 착불입니다.',
     image: 'assets/mixer-sslsix.svg'
   },
   {
@@ -239,21 +175,13 @@ const SEED = [
     category: CAT.SOFTWARE,
     brand: 'Ableton',
     price: 480000,
-    condition: 'S급',
     trade: ['직거래'],
     region: '서울 관악구',
     minutesAgo: 300,
     likes: 9,
     views: 288,
     seller: { name: '관악비트', joined: '2023.09', deals: 8, response: 92 },
-    specs: [
-      ['제조사', 'Ableton'],
-      ['모델명', 'Live 12 Suite'],
-      ['구입 시기', '2023년 9월'],
-      ['구성품', '정품 라이선스 (박스·USB 없음)'],
-      ['시리얼·박스', '라이선스만 이전, 계정 이전 동의 필요']
-    ],
-    desc: 'Ableton Live 12 Suite 정품 라이선스 이전 판매입니다. 제 계정에서 이전 처리 도와드리고, 결제 후 Ableton 지원팀 이전 절차까지 같이 진행합니다.\n\n박스나 USB는 없는 디지털 라이선스 상품입니다. 관악구 봉천동 직거래 또는 원격으로 진행 가능합니다.',
+    desc: 'Ableton Live 12 Suite 정품 라이선스 이전 판매입니다. 제 계정에서 이전 처리 도와드리고, 결제 후 Ableton 지원팀 이전 절차까지 같이 진행합니다. 관악구 봉천동 직거래 또는 원격으로 진행 가능합니다.',
     image: 'assets/software-ableton.svg'
   },
   {
@@ -262,21 +190,13 @@ const SEED = [
     category: CAT.KEYBOARD,
     brand: 'Nord',
     price: 3200000,
-    condition: 'A급',
     trade: ['직거래', '택배'],
     region: '서울 서초구',
     minutesAgo: 480,
     likes: 31,
     views: 655,
     seller: { name: '서초키보드', joined: '2022.03', deals: 22, response: 97 },
-    specs: [
-      ['제조사', 'Nord'],
-      ['모델명', 'Stage 3 88'],
-      ['구입 시기', '2022년 3월'],
-      ['구성품', '하드 케이스, 원박스, 전원 케이블'],
-      ['시리얼·박스', '모두 있음']
-    ],
-    desc: 'Nord Stage 3 88, 2022년 구입했습니다. 집에서만 사용해서 건반 헐거움이나 노브 유격 없고 모든 기능 정상입니다.\n\n하드 케이스와 원박스, 전원 케이블 포함입니다. 서초구 반포동 직거래 선호하고 택배는 운송비 별도입니다.',
+    desc: '집에서만 사용해서 건반 헐거움이나 노브 유격 없고 모든 기능 정상입니다. 서초구 반포동 직거래 선호하고 택배는 운송비 별도입니다.',
     image: 'assets/keyboard-nord.svg'
   },
   {
@@ -285,21 +205,13 @@ const SEED = [
     category: CAT.KEYBOARD,
     brand: 'Roland',
     price: 620000,
-    condition: 'B급',
     trade: ['직거래', '택배'],
     region: '인천 부평구',
     minutesAgo: 2880,
     likes: 7,
     views: 164,
     seller: { name: '부평피아노', joined: '2024.02', deals: 11, response: 95 },
-    specs: [
-      ['제조사', 'Roland'],
-      ['모델명', 'FP-30X (화이트)'],
-      ['구입 시기', '2024년 2월'],
-      ['구성품', '스탠드, 악보대, 원박스'],
-      ['시리얼·박스', '모두 있음']
-    ],
-    desc: '2024년 2월에 구입한 화이트 모델입니다. 입문용으로 집에서 1년 정도 사용했고 건반과 스피커 모두 정상입니다.\n\n스탠드와 악보대, 원박스 포함입니다. 인천 부평구 직거래 가능하고 택배도 됩니다.',
+    desc: '화이트 모델입니다. 입문용으로 집에서 1년 정도 사용했고 건반과 스피커 모두 정상입니다. 인천 부평구 직거래 가능하고 택배도 됩니다.',
     image: 'assets/keyboard-fp30x.svg'
   },
   {
@@ -308,21 +220,13 @@ const SEED = [
     category: CAT.GUITAR,
     brand: 'Fender',
     price: 1850000,
-    condition: 'A급',
     trade: ['직거래', '택배'],
     region: '서울 마포구',
     minutesAgo: 30,
     likes: 44,
     views: 1038,
     seller: { name: '홍대기타', joined: '2022.09', deals: 44, response: 98 },
-    specs: [
-      ['제조사', 'Fender'],
-      ['모델명', 'American Professional II Stratocaster'],
-      ['구입 시기', '2022년 9월 (미국 현지 구입)'],
-      ['구성품', '하드 케이스, 트레몰로 암, 백플레이트'],
-      ['시리얼·박스', '시리얼 카드 있음, 원박스 없음']
-    ],
-    desc: '2022년 미국에서 직접 구입한 American Professional II Stratocaster입니다. 3-Color Sunburst, 로즈우드 지판입니다.\n\n연주 흔적은 약간 있지만 넥과 프렛 상태 좋고 개조나 수리 이력 없습니다. 하드 케이스, 암, 백플레이트 포함이며 마포구 홍대입구 직거래 선호합니다.',
+    desc: '3-Color Sunburst, 로즈우드 지판입니다. 연주 흔적은 약간 있지만 넥과 프렛 상태 좋고 개조나 수리 이력 없습니다. 마포구 홍대입구 직거래 선호합니다.',
     image: 'assets/guitar-strat.svg'
   },
   {
@@ -331,21 +235,13 @@ const SEED = [
     category: CAT.BASS,
     brand: 'Fender',
     price: 780000,
-    condition: 'A급',
     trade: ['직거래', '택배'],
     region: '경기 수원시',
     minutesAgo: 1440,
     likes: 15,
     views: 342,
     seller: { name: '수원베이스', joined: '2023.04', deals: 18, response: 96 },
-    specs: [
-      ['제조사', 'Fender'],
-      ['모델명', 'Player Jazz Bass (멕시코산)'],
-      ['구입 시기', '2023년 4월'],
-      ['구성품', '기그백, 트러스로드 렌치'],
-      ['시리얼·박스', '시리얼 확인 가능, 박스 없음']
-    ],
-    desc: 'Fender Player Jazz Bass, 2023년 구입했습니다. 선셋 새틴 마감이고 픽가드에 미세 기스 외에는 깔끔합니다.\n\n넥 휨 없고 프렛 마모 거의 없습니다. 기그백 포함이며 수원시 인계동 직거래 또는 택배 가능합니다.',
+    desc: '선셋 새틴 마감이고 픽가드에 미세 기스 외에는 깔끔합니다. 넥 휨 없고 프렛 마모 거의 없습니다. 수원시 인계동 직거래 또는 택배 가능합니다.',
     image: 'assets/bass-jazz.svg'
   },
   {
@@ -354,21 +250,13 @@ const SEED = [
     category: CAT.DRUM,
     brand: 'Roland',
     price: 1050000,
-    condition: 'A급',
     trade: ['직거래'],
     region: '서울 광진구',
     minutesAgo: 660,
     likes: 23,
     views: 517,
     seller: { name: '광진드럼', joined: '2023.07', deals: 14, response: 95 },
-    specs: [
-      ['제조사', 'Roland'],
-      ['모델명', 'TD-17KVX'],
-      ['구입 시기', '2023년 7월'],
-      ['구성품', '모듈, 패드 일체, 하이햇 스탠드, 페달, 드럼키'],
-      ['시리얼·박스', '시리얼 확인 가능, 원박스 일부']
-    ],
-    desc: 'Roland TD-17KVX 전자드럼 세트입니다. 2023년 구입해서 집에서만 사용했고 패드 감도와 모듈 모두 정상입니다.\n\n하이햇 스탠드, 페달, 드럼키, 원박스 일부 포함입니다. 부피 때문에 광진구 구의동 직거래만 가능합니다.',
+    desc: '전자드럼 세트입니다. 집에서만 사용했고 패드 감도와 모듈 모두 정상입니다. 부피 때문에 광진구 구의동 직거래만 가능합니다.',
     image: 'assets/drums-td17.svg'
   },
   {
@@ -377,21 +265,13 @@ const SEED = [
     category: CAT.WIND,
     brand: 'Yamaha',
     price: 950000,
-    condition: 'B급',
     trade: ['직거래', '택배'],
     region: '대구 수성구',
     minutesAgo: 4320,
     likes: 6,
     views: 198,
     seller: { name: '대구관악', joined: '2021.12', deals: 9, response: 93 },
-    specs: [
-      ['제조사', 'Yamaha'],
-      ['모델명', 'YAS-280'],
-      ['구입 시기', '2021년 12월'],
-      ['구성품', '케이스, 마우스피스, 리가처, 스트랩'],
-      ['시리얼·박스', '시리얼 확인 가능, 박스 없음']
-    ],
-    desc: 'Yamaha YAS-280 알토 색소폰입니다. 2021년 구입 후 취미로만 불었고, 최근에 패드 교체와 오버홀을 받아 상태 좋습니다.\n\n케이스, 마우스피스, 리가처, 스트랩 포함입니다. 대구 수성구 직거래 또는 택배 가능합니다.',
+    desc: '취미로만 불었고 최근에 패드 교체와 오버홀을 받아 상태 좋습니다. 대구 수성구 직거래 또는 택배 가능합니다.',
     image: 'assets/wind-sax.svg'
   },
   {
@@ -400,21 +280,13 @@ const SEED = [
     category: CAT.STRING,
     brand: 'Yamaha',
     price: 320000,
-    condition: 'A급',
     trade: ['직거래', '택배'],
     region: '서울 노원구',
     minutesAgo: 5760,
     likes: 4,
     views: 121,
     seller: { name: '노원스트링', joined: '2024.03', deals: 6, response: 94 },
-    specs: [
-      ['제조사', 'Yamaha'],
-      ['모델명', 'V5SC 4/4'],
-      ['구입 시기', '2024년 3월'],
-      ['구성품', '활, 케이스, 어깨받침'],
-      ['시리얼·박스', '시리얼 확인 가능, 박스 있음']
-    ],
-    desc: 'Yamaha V5SC 4/4 바이올린입니다. 2024년에 구입했지만 학원을 그만두게 되어 판매합니다.\n\n활, 케이스, 어깨받침 포함이고 스트링은 기본 상태입니다. 서울 노원구 직거래 또는 택배 가능합니다.',
+    desc: '학원을 그만두게 되어 판매합니다. 스트링은 기본 상태입니다. 서울 노원구 직거래 또는 택배 가능합니다.',
     image: 'assets/strings-violin.svg'
   },
   {
@@ -423,21 +295,13 @@ const SEED = [
     category: CAT.PEDAL,
     brand: 'Strymon',
     price: 520000,
-    condition: 'S급',
     trade: ['직거래', '택배'],
     region: '서울 마포구',
     minutesAgo: 15,
     likes: 38,
     views: 864,
     seller: { name: '마포페달', joined: '2023.02', deals: 36, response: 99 },
-    specs: [
-      ['제조사', 'Strymon'],
-      ['모델명', 'BigSky'],
-      ['구입 시기', '2023년 2월'],
-      ['구성품', '원박스, 매뉴얼, 전원 어댑터'],
-      ['시리얼·박스', '모두 있음']
-    ],
-    desc: 'Strymon BigSky 리버브입니다. 2023년 구입해서 보드에 올려 집에서만 사용했습니다. 스위치와 노브 정상이고 스크래치 거의 없습니다.\n\n원박스, 매뉴얼, 전원 어댑터 포함입니다. 마포구 상수동 직거래 가능하고 택배도 됩니다.',
+    desc: '보드에 올려 집에서만 사용했습니다. 스위치와 노브 정상이고 스크래치 거의 없습니다. 마포구 상수동 직거래 가능하고 택배도 됩니다.',
     image: 'assets/pedal-bigsky.svg'
   },
   {
@@ -446,21 +310,13 @@ const SEED = [
     category: CAT.FURNITURE,
     brand: '자작',
     price: 280000,
-    condition: 'A급',
     trade: ['직거래'],
     region: '경기 하남시',
     minutesAgo: 2880,
     likes: 5,
     views: 143,
     seller: { name: '하남목공', joined: '2022.11', deals: 13, response: 97 },
-    specs: [
-      ['제조사', '자작 (하남목공)'],
-      ['모델명', '스튜디오 데스크 1500'],
-      ['구입 시기', '2022년 11월'],
-      ['구성품', '상판, 8U 랙 베이, 케이블 트레이'],
-      ['시리얼·박스', '해당 없음 (가구)']
-    ],
-    desc: '높이 조절되는 원목 스튜디오 데스크 1500입니다. 상판은 자작나무 집성목이고 8U 랙 베이와 케이블 트레이가 포함됩니다.\n\n사용감은 있지만 흔들림 없고 상태 좋습니다. 하남시 미사동에서 직접 가져가실 분만 구합니다. 택배는 어렵습니다.',
+    desc: '높이 조절되는 원목 스튜디오 데스크 1500입니다. 상판은 자작나무 집성목이고 8U 랙 베이와 케이블 트레이가 함께 있습니다. 사용감은 있지만 흔들림 없고 상태 좋습니다. 하남시 미사동에서 직접 가져가실 분만 구합니다.',
     image: 'assets/furniture-desk.svg'
   },
   {
@@ -469,21 +325,13 @@ const SEED = [
     category: CAT.CABLE,
     brand: 'Mogami',
     price: 180000,
-    condition: 'A급',
     trade: ['직거래', '택배'],
     region: '서울 성동구',
     minutesAgo: 420,
     likes: 11,
     views: 276,
     seller: { name: '성동케이블', joined: '2024.05', deals: 21, response: 96 },
-    specs: [
-      ['제조사', 'Mogami'],
-      ['모델명', '2549 (Neutrik 커넥터, 5m)'],
-      ['구입 시기', '2024년 5월'],
-      ['구성품', 'XLR 케이블 4본, 케이블 타이'],
-      ['시리얼·박스', '해당 없음']
-    ],
-    desc: 'Mogami 2549 케이블 5m 4본입니다. Neutrik XLR 커넥터로 작업해서 사용했고 모두 정상입니다.\n\n케이블 타이 묶어서 드리고 커넥터 접점 이상 없습니다. 성동구 성수동 직거래 또는 택배 가능합니다.',
+    desc: 'Mogami 2549 케이블 5m 4본입니다. Neutrik XLR 커넥터로 작업해서 사용했고 모두 정상입니다. 커넥터 접점 이상 없습니다. 성동구 성수동 직거래 또는 택배 가능합니다.',
     image: 'assets/cable-xlr.svg'
   },
   {
@@ -492,21 +340,13 @@ const SEED = [
     category: CAT.ETC,
     brand: 'SKB',
     price: 150000,
-    condition: 'B급',
     trade: ['직거래'],
     region: '경기 고양시',
     minutesAgo: 7200,
     likes: 3,
     views: 98,
     seller: { name: '고양라이브', joined: '2021.05', deals: 17, response: 94 },
-    specs: [
-      ['제조사', 'SKB'],
-      ['모델명', '8U 랙 케이스'],
-      ['구입 시기', '2021년 5월'],
-      ['구성품', '케이스 본체, 랙 나사 세트'],
-      ['시리얼·박스', '시리얼 확인 가능, 박스 없음']
-    ],
-    desc: 'SKB 8U 랙 케이스입니다. 2021년에 구입해서 이동 공연 때 몇 번 사용했습니다. 잠금쇠와 손잡이 모두 정상이고 내부 랙 레일 나사도 구비되어 있습니다.\n\n무게가 있어 고양시 일산동 직거래만 가능합니다.',
+    desc: '8U 랙 케이스입니다. 이동 공연 때 몇 번 사용했습니다. 잠금쇠와 손잡이 모두 정상이고 내부 랙 레일 나사도 구비되어 있습니다. 무게가 있어 고양시 일산동 직거래만 가능합니다.',
     image: 'assets/etc-rackcase.svg'
   }
 ];
@@ -516,9 +356,9 @@ const SEED = [
 const INQUIRY_SEED = [
   {
     id: 'q-seed-1',
-    title: 'Neumann TLM 103 매물 시리얼 확인 문의',
+    title: 'Neumann TLM 103 매물 문의',
     contact: '김도현, 010-2841-7730',
-    body: '등록된 TLM 103 사진에 시리얼 카드가 보이지 않아 문의드립니다. 시리얼 카드와 원박스가 모두 있는지, 정품 등록 이력이 있는지 확인 부탁드립니다.',
+    body: '등록된 TLM 103 매물 관련해서 문의드립니다. 실제 작동 상태와 시연 가능 여부, 거래 가능한 시간대를 알려 주시면 감사하겠습니다.',
     createdAt: Date.now() - 1000 * 60 * 60 * 26
   },
   {
@@ -609,7 +449,6 @@ const seedListings = SEED.map((item) => ({
 const state = {
   category: '전체',
   query: '',
-  conditions: new Set(),
   trades: new Set(),
   sort: 'latest',
   user: readJSON('sy_user', null),
@@ -718,13 +557,9 @@ function filteredListings() {
   const query = state.query.trim().toLowerCase();
   if (query) {
     list = list.filter((item) => (
-      [item.title, item.brand, item.condition, item.region, item.category, item.desc]
+      [item.title, item.brand, item.region, item.category, item.desc]
         .filter(Boolean).join(' ').toLowerCase().includes(query)
     ));
-  }
-
-  if (state.conditions.size > 0) {
-    list = list.filter((item) => state.conditions.has(item.condition));
   }
 
   if (state.trades.size > 0) {
@@ -739,15 +574,13 @@ function filteredListings() {
 }
 
 function cardHTML(item) {
-  const meta = [item.condition, item.region].filter(Boolean).join(', ');
+  const meta = item.region ? `, ${item.region}` : '';
   return `
-    <article class="listing-card" role="button" tabindex="0" data-id="${esc(item.id)}" aria-label="${esc(item.title)}, ${won(item.price)}원${meta ? `, ${esc(meta)}` : ''}">
+    <article class="listing-card" role="button" tabindex="0" data-id="${esc(item.id)}" aria-label="${esc(item.title)}, ${won(item.price)}원${esc(meta)}">
       <div class="card-thumb">
-        ${item.condition ? `<span class="badge" data-grade="${esc(item.condition)}">${esc(item.condition)}</span>` : ''}
         <img src="${esc(item.image)}" alt="${esc(item.title)} 상품 이미지" loading="lazy">
       </div>
       <div class="card-body">
-        <p class="card-brand">${esc(item.brand)}</p>
         <h3 class="card-title">${esc(item.title)}</h3>
         <p class="card-price">${won(item.price)}<span class="won">원</span></p>
         <div class="card-foot">
@@ -771,11 +604,10 @@ function render() {
   els.title.textContent = state.category === '전체' ? '전체 매물' : state.category;
 
   $$('.chip').forEach((chip) => {
-    const set = chip.dataset.filter === 'condition' ? state.conditions : state.trades;
-    chip.setAttribute('aria-pressed', set.has(chip.dataset.value) ? 'true' : 'false');
+    chip.setAttribute('aria-pressed', state.trades.has(chip.dataset.value) ? 'true' : 'false');
   });
 
-  const hasFilters = state.category !== '전체' || state.query.trim() || state.conditions.size || state.trades.size;
+  const hasFilters = state.category !== '전체' || state.query.trim() || state.trades.size;
   els.reset.hidden = !hasFilters;
   els.searchClear.hidden = !state.query;
 
@@ -808,15 +640,6 @@ function closeModal(el) {
 
 /* ------------------------------------------------------------------- detail */
 
-function specRows(item) {
-  const specs = Array.isArray(item.specs) ? item.specs.slice() : [];
-  if (item.region) specs.push(['거래 지역', item.region]);
-  if (item.trade && item.trade.length) specs.push(['거래 방식', item.trade.join(', ')]);
-  return specs.map(([label, value]) => (
-    `<div class="spec-row"><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`
-  )).join('');
-}
-
 function detailHTML(item) {
   const wished = state.wishlist.has(item.id);
   const initial = item.seller.name.trim().charAt(0) || '판';
@@ -826,16 +649,15 @@ function detailHTML(item) {
       <img src="${esc(item.image)}" alt="${esc(item.title)} 상품 이미지">
     </div>
     <div class="detail-body">
-      <p class="detail-eyebrow">${esc(item.category)} <span>·</span> ${esc(item.brand)}</p>
+      <p class="detail-eyebrow">${esc(item.category)}</p>
       <h2 class="detail-title" id="detail-title">${esc(item.title)}</h2>
       <p class="detail-price">${won(item.price)}<span class="won">원</span></p>
       <div class="detail-tags">
-        ${item.condition ? `<span class="detail-tag is-grade">${esc(item.condition)}</span>` : ''}
         ${(item.trade || []).map((t) => `<span class="detail-tag">${esc(t)}</span>`).join('')}
         ${item.region ? `<span class="detail-tag">${esc(item.region)}</span>` : ''}
       </div>
 
-      <dl class="spec-list">${specRows(item)}</dl>
+      ${item.contact ? `<p class="detail-contact">연락처 <b>${esc(item.contact)}</b></p>` : ''}
 
       <div class="detail-stats">
         <span>조회 ${won(item.views || 0)}</span>
@@ -1159,9 +981,7 @@ function handleSell(event) {
     id: `u-${Date.now()}`,
     title,
     category,
-    brand: '개인 판매',
     price,
-    condition: '',
     trade: [],
     region: '',
     contact,
@@ -1174,10 +994,6 @@ function handleSell(event) {
       deals: 0,
       response: 100
     },
-    specs: [
-      ['카테고리', category],
-      ['연락처', contact]
-    ],
     desc: '판매자가 상세 설명을 남기지 않았습니다. 연락처로 문의해 주세요.',
     image: pendingPhoto ? pendingPhoto.dataUrl : (CATEGORY_IMAGES[category] || CATEGORY_IMAGES[CAT.ETC]),
     photoType: pendingPhoto ? pendingPhoto.type : null,
@@ -1319,7 +1135,6 @@ function setAdmin(on) {
 function resetAll(clearSort = true) {
   state.category = '전체';
   state.query = '';
-  state.conditions.clear();
   state.trades.clear();
   if (clearSort) state.sort = 'latest';
   els.search.value = '';
@@ -1377,10 +1192,9 @@ function init() {
   /* filters */
   $$('.chip').forEach((chip) => {
     chip.addEventListener('click', () => {
-      const set = chip.dataset.filter === 'condition' ? state.conditions : state.trades;
       const value = chip.dataset.value;
-      if (set.has(value)) set.delete(value);
-      else set.add(value);
+      if (state.trades.has(value)) state.trades.delete(value);
+      else state.trades.add(value);
       render();
     });
   });
