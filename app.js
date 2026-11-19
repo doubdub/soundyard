@@ -432,6 +432,8 @@ function writeJSON(key, value) {
 /* --------------------------------------------------------- inquiry constants */
 
 const INQUIRY_KEY = 'sy_inquiries';
+const CHAT_KEY = 'sy_chats';
+const CHAT_TEXT_MAX = 500;
 const ADMIN_SESSION_KEY = 'sy_admin_session';
 /* 데모용 관리자 비밀번호. 실제 서비스에서는 Cloudflare Workers + D1 인증으로 교체 (README 참고) */
 const ADMIN_PASSWORD = 'admin1234';
@@ -483,6 +485,7 @@ const state = {
     image: item.image || CATEGORY_IMAGES[item.category] || CATEGORY_IMAGES[CAT.ETC]
   })),
   inquiries: readJSON(INQUIRY_KEY, INQUIRY_SEED),
+  chats: readChats(),
   deleted: new Set(readJSON('sy_deleted_listings', []))
 };
 
@@ -495,6 +498,8 @@ let toastTimer = null;
 let newCardTimer = null;
 let pendingPhoto = null;
 let photoBusy = false;
+let activeRoomId = null;
+const collapsedChatGroups = new Set();
 
 /* -------------------------------------------------------------------- views */
 
@@ -525,8 +530,19 @@ const els = {
   mypageLogout: $('#mypage-logout'),
   wishList: $('#wish-list'),
   postsList: $('#posts-list'),
+  chatList: $('#chat-list'),
   wishCount: $('#wish-count'),
   postsCount: $('#posts-count'),
+  chatsCount: $('#chats-count'),
+  chatModal: $('#chat-modal'),
+  chatLog: $('#chat-log'),
+  chatForm: $('#chat-form'),
+  chatInput: $('#chat-input'),
+  chatListingThumb: $('#chat-listing-thumb'),
+  chatListingTitle: $('#chat-listing-title'),
+  chatListingPrice: $('#chat-listing-price'),
+  chatPeerName: $('#chat-peer-name'),
+  chatPeerRole: $('#chat-peer-role'),
   detailModal: $('#detail-modal'),
   sellModal: $('#sell-modal'),
   inquiryModal: $('#inquiry-modal'),
@@ -674,6 +690,7 @@ function openModal(el) {
   el.setAttribute('aria-hidden', 'false');
   modalStack = modalStack.filter((m) => m !== el);
   modalStack.push(el);
+  el.style.zIndex = String(100 + modalStack.length * 10);
   document.body.style.overflow = 'hidden';
   const focusTarget = $('.modal-close', el);
   if (focusTarget) setTimeout(() => focusTarget.focus(), 30);
@@ -709,6 +726,11 @@ function detailHTML(item) {
         <span class="detail-manage-note">${item.custom ? '내가 등록한 매물' : '관리자 권한'}</span>
       </div>`
     : '';
+  const ownNote = isOwnListing(item)
+    ? `<p class="detail-chat-note">내가 등록한 매물입니다. ${state.chats.some((room) => room.listingId === item.id)
+      ? '구매자와 오간 대화는 마이페이지 > 채팅중인 매물에서 볼 수 있습니다.'
+      : '구매자가 채팅을 시작하면 마이페이지 > 채팅중인 매물에서 확인할 수 있습니다.'}</p>`
+    : '';
 
   return `
     <div class="detail-media">
@@ -735,19 +757,12 @@ function detailHTML(item) {
         <button type="button" class="btn btn-wish${wished ? ' is-active' : ''}" data-wish aria-pressed="${wished}">
           ${heartIcon(wished)}<span>${wished ? '찜한 매물' : '찜하기'}</span>
         </button>
-        <button type="button" class="btn btn-chat" data-chat>채팅 문의</button>
+        <button type="button" class="btn btn-chat" data-chat>채팅하기</button>
       </div>
+
+      ${ownNote}
 
       ${manageHTML}
-
-      <div class="chat-box" id="chat-box" hidden>
-        <label for="chat-message">판매자에게 보낼 메시지</label>
-        <textarea id="chat-message">안녕하세요. ${esc(item.title)} 아직 판매 중일까요?</textarea>
-        <div class="chat-box-actions">
-          <button type="button" class="btn btn-outline" data-chat-cancel>취소</button>
-          <button type="button" class="btn btn-primary" data-chat-send>보내기</button>
-        </div>
-      </div>
     </div>
     <div class="detail-desc">
       <h3>상세정보</h3>
@@ -812,17 +827,6 @@ function toggleWish(id) {
   if (els.mypageModal.classList.contains('is-open')) renderMypage();
 }
 
-function showChatBox() {
-  const box = $('#chat-box');
-  if (!box) return;
-  box.hidden = false;
-  const textarea = $('#chat-message');
-  if (textarea) {
-    textarea.focus();
-    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-  }
-}
-
 /* ------------------------------------------------------------------ mypage */
 
 function myListings() {
@@ -872,7 +876,7 @@ function mypageRowHTML(item, kind) {
 }
 
 function setMypageTab(tab) {
-  mypageTab = tab === 'posts' ? 'posts' : 'wish';
+  mypageTab = tab === 'posts' ? 'posts' : tab === 'chats' ? 'chats' : 'wish';
   $$('.mypage-tab').forEach((btn) => {
     const active = btn.dataset.tab === mypageTab;
     btn.classList.toggle('is-active', active);
@@ -880,6 +884,7 @@ function setMypageTab(tab) {
   });
   $('#mypage-panel-wish').hidden = mypageTab !== 'wish';
   $('#mypage-panel-posts').hidden = mypageTab !== 'posts';
+  $('#mypage-panel-chats').hidden = mypageTab !== 'chats';
 }
 
 function renderMypage() {
@@ -917,6 +922,12 @@ function renderMypage() {
       '<button type="button" class="btn btn-primary btn-sm" data-mypage-sell>판매하기</button>'
     );
 
+  const groups = chatGroups();
+  els.chatsCount.textContent = groups.length;
+  els.chatList.innerHTML = groups.length
+    ? groups.map(chatGroupHTML).join('')
+    : mypageEmptyHTML('아직 진행 중인 채팅이 없습니다', '매물 상세에서 채팅하기를 눌러 대화를 시작해 보세요.');
+
   setMypageTab(mypageTab);
 }
 
@@ -928,6 +939,333 @@ function openMypage() {
   }
   renderMypage();
   openModal(els.mypageModal);
+}
+
+/* --------------------------------------------------------------------- chat */
+
+function userKey() {
+  if (!state.user) return '';
+  return String(state.user.id || state.user.name || '');
+}
+
+/* 매물 주인 키: 직접 등록한 매물은 ownerId, 기본 매물은 판매자 닉네임으로 구분 */
+function ownerKey(item) {
+  if (!item) return '';
+  if (item.ownerId) return String(item.ownerId);
+  return `seed:${item.seller ? item.seller.name : item.id}`;
+}
+
+function isOwnListing(item) {
+  return Boolean(item && state.user && ownerKey(item) === userKey());
+}
+
+function chatListingMeta(room) {
+  const item = allListings().find((x) => x.id === room.listingId);
+  if (item) return { title: item.title, price: item.price, image: item.image, exists: true };
+  return {
+    title: room.listingTitle || '삭제된 매물',
+    price: room.listingPrice || 0,
+    image: room.listingImage || CATEGORY_IMAGES[CAT.ETC],
+    exists: false
+  };
+}
+
+function myRooms() {
+  const uid = userKey();
+  if (!uid) return [];
+  return state.chats.filter((room) => room.sellerId === uid || room.buyerId === uid);
+}
+
+function chatCounterpart(room) {
+  if (room.sellerId === userKey()) {
+    return { id: room.buyerId, name: room.buyerName || '구매자', role: '구매자' };
+  }
+  return { id: room.sellerId, name: room.sellerName || '판매자', role: '판매자' };
+}
+
+function roomLastMessage(room) {
+  return room.messages && room.messages.length ? room.messages[room.messages.length - 1] : null;
+}
+
+function readChats() {
+  const raw = readJSON(CHAT_KEY, []);
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((room) => room && room.id && room.listingId)
+    .map((room) => ({ ...room, messages: Array.isArray(room.messages) ? room.messages : [] }));
+}
+
+function roomUpdatedAt(room) {
+  const last = roomLastMessage(room);
+  return room.updatedAt || (last ? last.createdAt : room.createdAt) || 0;
+}
+
+function saveChats() {
+  return writeJSON(CHAT_KEY, state.chats);
+}
+
+function chatClock(ts) {
+  return new Date(ts).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+function chatDayKey(ts) {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+}
+
+function chatDayLabel(ts) {
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  if (chatDayKey(ts) === chatDayKey(today.getTime())) return '오늘';
+  if (chatDayKey(ts) === chatDayKey(yesterday.getTime())) return '어제';
+  return new Date(ts).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+/* 같은 매물에 오간 대화를 매물 단위로 묶어 최근 대화순으로 정리한다. */
+function chatGroups() {
+  const map = new Map();
+  myRooms().forEach((room) => {
+    if (!map.has(room.listingId)) {
+      map.set(room.listingId, { listingId: room.listingId, rooms: [], updatedAt: 0 });
+    }
+    const group = map.get(room.listingId);
+    group.rooms.push(room);
+    group.updatedAt = Math.max(group.updatedAt, roomUpdatedAt(room));
+  });
+
+  const groups = Array.from(map.values());
+  groups.forEach((group) => group.rooms.sort((a, b) => roomUpdatedAt(b) - roomUpdatedAt(a)));
+  groups.sort((a, b) => b.updatedAt - a.updatedAt);
+  return groups;
+}
+
+function chatThreadHTML(room) {
+  const peer = chatCounterpart(room);
+  const last = roomLastMessage(room);
+  return `
+    <li class="chat-thread">
+      <button type="button" data-chat-open="${esc(room.id)}" aria-label="${esc(peer.name)}님과의 대화 열기">
+        <span class="chat-thread-avatar" aria-hidden="true">${esc(peer.name.trim().charAt(0) || '?')}</span>
+        <span class="chat-thread-body">
+          <span class="chat-thread-top"><b>${esc(peer.name)}</b><span class="chat-thread-time">${timeAgo(roomUpdatedAt(room))}</span></span>
+          <span class="chat-thread-preview">${esc(last ? last.text : '아직 메시지가 없습니다')}</span>
+        </span>
+      </button>
+    </li>`;
+}
+
+function chatGroupHTML(group) {
+  const meta = chatListingMeta(group.rooms[0]);
+  const latest = group.rooms[0];
+  const last = roomLastMessage(latest);
+  const multi = group.rooms.length > 1;
+  const collapsed = collapsedChatGroups.has(group.listingId);
+  const iAmSeller = latest.sellerId === userKey();
+  const peerName = chatCounterpart(latest).name;
+  const lastText = last ? last.text : '아직 메시지가 없습니다';
+  const sub = multi ? `${peerName} 외 ${group.rooms.length - 1}명 · ${lastText}` : `${peerName} · ${lastText}`;
+
+  return `
+    <li class="chat-group${collapsed ? ' is-collapsed' : ''}">
+      <button type="button" class="chat-group-head"
+        ${multi
+          ? `data-chat-toggle="${esc(group.listingId)}" aria-expanded="${!collapsed}" aria-label="${esc(meta.title)} 대화 ${group.rooms.length}개 펼치기"`
+          : `data-chat-open="${esc(latest.id)}" aria-label="${esc(meta.title)} 대화 열기"`}>
+        <span class="mypage-thumb"><img src="${esc(meta.image)}" alt="" loading="lazy"></span>
+        <span class="chat-group-body">
+          <span class="chat-group-title">${esc(meta.title)}</span>
+          <span class="chat-group-price">${won(meta.price)}<span class="won">원</span></span>
+          <span class="chat-group-sub">${esc(sub)}</span>
+        </span>
+        <span class="chat-group-meta">
+          <span class="chat-group-time">${timeAgo(group.updatedAt)}</span>
+          ${multi ? `<span class="chat-count">대화 ${group.rooms.length}</span>` : ''}
+          ${iAmSeller ? '<span class="chat-tag">내 매물</span>' : ''}
+        </span>
+      </button>
+      ${multi ? `<ul class="chat-threads"${collapsed ? ' hidden' : ''}>${group.rooms.map(chatThreadHTML).join('')}</ul>` : ''}
+    </li>`;
+}
+
+function chatLogHTML(room) {
+  const uid = userKey();
+  if (!room.messages.length) {
+    return `
+      <div class="chat-empty">
+        <p class="chat-empty-title">아직 메시지가 없습니다</p>
+        <p class="chat-empty-desc">${esc(chatCounterpart(room).name)}님에게 첫 메시지를 보내 대화를 시작해 보세요.</p>
+      </div>`;
+  }
+
+  const blocks = [];
+  let day = '';
+  let prevSender = '';
+
+  room.messages.forEach((msg) => {
+    const key = chatDayKey(msg.createdAt);
+    if (key !== day) {
+      day = key;
+      prevSender = '';
+      blocks.push(`<div class="chat-day"><span>${esc(chatDayLabel(msg.createdAt))}</span></div>`);
+    }
+
+    const mine = msg.senderId === uid;
+    const nameHTML = !mine && prevSender !== msg.senderId
+      ? `<span class="chat-msg-name">${esc(msg.senderName || '')}</span>`
+      : '';
+    prevSender = msg.senderId;
+
+    blocks.push(`
+      <div class="chat-msg${mine ? ' is-mine' : ''}">
+        ${nameHTML}
+        <div class="chat-bubble">${esc(msg.text)}</div>
+        <span class="chat-msg-time">${chatClock(msg.createdAt)}</span>
+      </div>`);
+  });
+
+  return blocks.join('');
+}
+
+function scrollChatToEnd() {
+  if (els.chatLog) els.chatLog.scrollTop = els.chatLog.scrollHeight;
+}
+
+function renderChatRoom() {
+  const room = state.chats.find((r) => r.id === activeRoomId);
+  if (!room) return;
+
+  const meta = chatListingMeta(room);
+  const peer = chatCounterpart(room);
+
+  els.chatListingThumb.src = meta.image;
+  els.chatListingThumb.alt = meta.title;
+  els.chatListingTitle.textContent = meta.title;
+  els.chatListingPrice.textContent = `${won(meta.price)}원`;
+  els.chatPeerName.textContent = peer.name;
+  els.chatPeerRole.textContent = peer.role;
+  els.chatLog.innerHTML = chatLogHTML(room);
+}
+
+function openChatRoom(roomId) {
+  const room = state.chats.find((r) => r.id === roomId);
+  if (!room) return;
+
+  activeRoomId = roomId;
+  renderChatRoom();
+  openModal(els.chatModal);
+
+  setTimeout(() => {
+    scrollChatToEnd();
+    if (window.innerWidth > 760) els.chatInput.focus();
+  }, 60);
+}
+
+/* 매물 상세의 [채팅하기] — 구매자는 매물당 하나의 대화방을 열고, 판매자는 받은 대화를 연다. */
+function openChatForListing(listingId) {
+  const item = allListings().find((x) => x.id === listingId);
+  if (!item) {
+    toast('삭제된 매물입니다.');
+    return;
+  }
+  if (!state.user) {
+    pendingIntent = 'chat';
+    showAuth();
+    toast('로그인 후 판매자와 채팅할 수 있습니다.');
+    return;
+  }
+
+  const uid = userKey();
+  const rooms = state.chats
+    .filter((room) => room.listingId === item.id && (room.sellerId === uid || room.buyerId === uid))
+    .sort((a, b) => roomUpdatedAt(b) - roomUpdatedAt(a));
+
+  if (ownerKey(item) === uid) {
+    if (!rooms.length) {
+      toast('내가 등록한 매물입니다. 구매자가 채팅을 시작하면 마이페이지 > 채팅중인 매물에서 확인할 수 있습니다.');
+      return;
+    }
+    if (rooms.length === 1) {
+      openChatRoom(rooms[0].id);
+      return;
+    }
+    collapsedChatGroups.delete(item.id);
+    mypageTab = 'chats';
+    renderMypage();
+    if (!els.mypageModal.classList.contains('is-open')) openModal(els.mypageModal);
+    return;
+  }
+
+  let room = state.chats.find((r) => r.listingId === item.id && r.buyerId === uid) || null;
+  if (!room) {
+    room = {
+      id: `room-${Date.now()}`,
+      listingId: item.id,
+      listingTitle: item.title,
+      listingPrice: item.price,
+      listingImage: item.image,
+      sellerId: ownerKey(item),
+      sellerName: item.seller ? item.seller.name : '판매자',
+      buyerId: uid,
+      buyerName: state.user.name || '회원',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      messages: []
+    };
+    state.chats.push(room);
+    saveChats();
+  }
+  openChatRoom(room.id);
+}
+
+function sendChatMessage(event) {
+  if (event) event.preventDefault();
+
+  const room = state.chats.find((r) => r.id === activeRoomId);
+  if (!room || !state.user) return;
+
+  const text = els.chatInput.value.trim();
+  if (!text) {
+    els.chatInput.focus();
+    return;
+  }
+
+  const message = {
+    id: `m-${Date.now()}`,
+    senderId: userKey(),
+    senderName: state.user.name || '회원',
+    text: text.slice(0, CHAT_TEXT_MAX),
+    createdAt: Date.now()
+  };
+
+  room.messages.push(message);
+  room.updatedAt = message.createdAt;
+
+  if (!saveChats()) {
+    room.messages.pop();
+    toast('브라우저 저장 공간이 부족해 메시지를 보내지 못했습니다.');
+    return;
+  }
+
+  els.chatInput.value = '';
+  renderChatRoom();
+  scrollChatToEnd();
+  if (els.mypageModal.classList.contains('is-open')) renderMypage();
+}
+
+function openChatListingDetail() {
+  const room = state.chats.find((r) => r.id === activeRoomId);
+  if (!room) return;
+
+  const item = allListings().find((x) => x.id === room.listingId);
+  if (!item) {
+    toast('삭제된 매물입니다.');
+    return;
+  }
+
+  closeModal(els.chatModal);
+  if (els.detailModal.classList.contains('is-open') && currentDetailId === item.id) return;
+  setTimeout(() => openDetail(item.id), 100);
 }
 
 /* ------------------------------------------------------------------ delete */
@@ -996,8 +1334,8 @@ function loginUser(user, message) {
 
   if (intent === 'sell') {
     setTimeout(openSell, 180);
-  } else if (intent === 'chat' && els.detailModal.classList.contains('is-open')) {
-    setTimeout(showChatBox, 120);
+  } else if (intent === 'chat' && currentDetailId) {
+    setTimeout(() => openChatForListing(currentDetailId), 160);
   }
 }
 
@@ -1034,6 +1372,7 @@ function logoutUser() {
 
   renderHeader();
   renderInquiries();
+  closeModal(els.chatModal);
   closeModal(els.mypageModal);
 
   /* SDK에 할당된 카카오 토큰도 서버에서 폐기한다 */
@@ -1726,34 +2065,8 @@ function init() {
     }
 
     if (event.target.closest('[data-chat]')) {
-      if (!state.user) {
-        pendingIntent = 'chat';
-        showAuth();
-        toast('로그인 후 판매자에게 문의할 수 있습니다.');
-        return;
-      }
-      const box = $('#chat-box');
-      if (box) box.hidden = !box.hidden;
-      if (box && !box.hidden) $('#chat-message').focus();
+      if (currentDetailId) openChatForListing(currentDetailId);
       return;
-    }
-
-    if (event.target.closest('[data-chat-cancel]')) {
-      const box = $('#chat-box');
-      if (box) box.hidden = true;
-      return;
-    }
-
-    if (event.target.closest('[data-chat-send]')) {
-      const textarea = $('#chat-message');
-      if (!textarea.value.trim()) {
-        toast('보낼 메시지를 입력해 주세요.');
-        textarea.focus();
-        return;
-      }
-      const box = $('#chat-box');
-      if (box) box.hidden = true;
-      toast('판매자에게 문의를 보냈습니다.');
     }
   });
 
@@ -1776,6 +2089,21 @@ function init() {
     if (sell) {
       closeModal(els.mypageModal);
       setTimeout(openSell, 120);
+      return;
+    }
+
+    const toggle = event.target.closest('[data-chat-toggle]');
+    if (toggle) {
+      const id = toggle.dataset.chatToggle;
+      if (collapsedChatGroups.has(id)) collapsedChatGroups.delete(id);
+      else collapsedChatGroups.add(id);
+      renderMypage();
+      return;
+    }
+
+    const chatOpen = event.target.closest('[data-chat-open]');
+    if (chatOpen) {
+      openChatRoom(chatOpen.dataset.chatOpen);
       return;
     }
 
@@ -1851,6 +2179,14 @@ function init() {
     els.adminError.hidden = true;
     els.adminPassword.value = '';
   });
+
+  /* chat */
+  $('#chat-back').addEventListener('click', () => {
+    closeModal(els.chatModal);
+    if (els.mypageModal.classList.contains('is-open')) renderMypage();
+  });
+  $('#chat-listing').addEventListener('click', openChatListingDetail);
+  els.chatForm.addEventListener('submit', sendChatMessage);
 
   /* modal close */
   document.addEventListener('click', (event) => {
