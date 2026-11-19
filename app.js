@@ -1075,13 +1075,12 @@ function chatGroupHTML(group) {
         <span class="mypage-thumb"><img src="${esc(meta.image)}" alt="" loading="lazy"></span>
         <span class="chat-group-body">
           <span class="chat-group-title">${esc(meta.title)}</span>
-          <span class="chat-group-price">${won(meta.price)}<span class="won">원</span></span>
+          <span class="chat-group-price">${won(meta.price)}<span class="won">원</span>${iAmSeller ? '<span class="chat-tag">내 매물</span>' : ''}</span>
           <span class="chat-group-sub">${esc(sub)}</span>
         </span>
         <span class="chat-group-meta">
           <span class="chat-group-time">${timeAgo(group.updatedAt)}</span>
           ${multi ? `<span class="chat-count">대화 ${group.rooms.length}</span>` : ''}
-          ${iAmSeller ? '<span class="chat-tag">내 매물</span>' : ''}
         </span>
       </button>
       ${multi ? `<ul class="chat-threads"${collapsed ? ' hidden' : ''}>${group.rooms.map(chatThreadHTML).join('')}</ul>` : ''}
