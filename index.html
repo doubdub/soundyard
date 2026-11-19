@@ -6,7 +6,7 @@
 <title>사운드야드 - 중고 음향기기·악기 거래</title>
 <meta name="description" content="마이크, 아웃보드, 스피커, 오디오 인터페이스부터 기타, 드럼, 관현악기까지. 사운드야드에서 중고 음향기기와 악기를 거래하세요.">
 <link rel="icon" href="assets/mic-tlm103.svg" type="image/svg+xml">
-<link rel="stylesheet" href="styles.css?v=20261119-4">
+<link rel="stylesheet" href="styles.css?v=20261119-5">
 </head>
 <body>
 
@@ -191,6 +191,10 @@
         <input type="text" id="sell-contact" name="contact" inputmode="tel" placeholder="예: 010-1234-5678 또는 카카오톡 ID" maxlength="40" autocomplete="tel" required>
       </div>
       <div class="field">
+        <label for="sell-description">상세정보</label>
+        <textarea id="sell-description" name="description" rows="4" maxlength="2000" placeholder="거래 방식(직거래/택배), 지역, 특이사항 등을 자유롭게 적어 주세요."></textarea>
+      </div>
+      <div class="field">
         <span class="field-label">사진</span>
         <input type="file" id="sell-photo" accept="image/*" class="sr-only">
         <label for="sell-photo" class="photo-drop" id="photo-drop">
@@ -267,6 +271,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="app.js?v=20261119-4"></script>
+<script src="app.js?v=20261119-5"></script>
 </body>
 </html>

@@ -504,6 +504,7 @@ const els = {
   sellCategory: $('#sell-category'),
   sellPrice: $('#sell-price'),
   sellContact: $('#sell-contact'),
+  sellDescription: $('#sell-description'),
   sellPhoto: $('#sell-photo'),
   photoDrop: $('#photo-drop'),
   photoPreview: $('#photo-preview'),
@@ -662,6 +663,10 @@ function closeModal(el) {
 function detailHTML(item) {
   const wished = state.wishlist.has(item.id);
   const initial = item.seller.name.trim().charAt(0) || '판';
+  const descText = String(item.desc || '').trim();
+  const descHTML = descText
+    ? `<p>${esc(descText)}</p>`
+    : '<p class="detail-desc-empty">등록된 상세정보가 없습니다. 판매자 연락처로 문의해 주세요.</p>';
   const manageHTML = canDeleteListing(item)
     ? `
       <div class="detail-manage">
@@ -710,8 +715,8 @@ function detailHTML(item) {
       </div>
     </div>
     <div class="detail-desc">
-      <h3>상품 설명</h3>
-      <p>${esc(item.desc)}</p>
+      <h3>상세정보</h3>
+      ${descHTML}
     </div>
     <div class="detail-seller">
       <div class="seller">
@@ -1030,6 +1035,7 @@ function handleSell(event) {
   const title = $('#sell-title').value.trim();
   const price = Number(els.sellPrice.value.replace(/\D/g, ''));
   const contact = els.sellContact.value.trim();
+  const description = els.sellDescription.value.trim();
 
   const fail = (message, field) => {
     els.sellError.textContent = message;
@@ -1060,7 +1066,7 @@ function handleSell(event) {
       deals: 0,
       response: 100
     },
-    desc: '판매자가 상세 설명을 남기지 않았습니다. 연락처로 문의해 주세요.',
+    desc: description,
     image: pendingPhoto ? pendingPhoto.dataUrl : (CATEGORY_IMAGES[category] || CATEGORY_IMAGES[CAT.ETC]),
     photoType: pendingPhoto ? pendingPhoto.type : null,
     custom: true
