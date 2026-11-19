@@ -4,6 +4,22 @@
 
 'use strict';
 
+/* ============================================================ 카카오 설정
+   1) jsKey   : 카카오 디벨로퍼스 > 앱 키 > JavaScript 키
+   2) restKey : 같은 화면의 REST API 키.
+                순수 정적 페이지에서는 브라우저가 인가 코드를 토큰으로 직접
+                교환해야 하므로 REST API 키가 필요합니다. (Client Secret 사용 안 함)
+   3) redirectUri : 비워 두면 현재 페이지 주소(예: https://doubdub.github.io/soundyard/)를
+                사용합니다. 카카오 콘솔 > 카카오 로그인 > Redirect URI에 같은 값을 등록하세요.
+   jsKey 가 비어 있으면 기존처럼 데모 계정(사운드러버)으로 로그인합니다.
+   ======================================================================== */
+
+const KAKAO_CONFIG = {
+  jsKey: '',
+  restKey: '',
+  redirectUri: ''
+};
+
 const CAT = {
   MIC: '마이크',
   OUTBOARD: '아웃보드(프리앰프, 컴프레서, EQ 등)',
@@ -421,6 +437,7 @@ const ADMIN_SESSION_KEY = 'sy_admin_session';
 const ADMIN_PASSWORD = 'admin1234';
 /* 로그인 모달의 '관리자 테스트 로그인'으로 바로 들어가는 데모 관리자 계정 */
 const ADMIN_USER = {
+  id: 'admin',
   name: '관리자',
   email: 'admin@soundyard.kr',
   provider: '관리자 테스트',
@@ -471,6 +488,8 @@ const state = {
 
 let currentDetailId = null;
 let pendingIntent = null;
+let modalStack = [];
+let mypageTab = 'wish';
 let lastFocused = null;
 let toastTimer = null;
 let newCardTimer = null;
@@ -494,8 +513,20 @@ const els = {
   userMenu: $('#user-menu'),
   userAvatar: $('#user-avatar'),
   userName: $('#user-name'),
-  logoutBtn: $('#logout-btn'),
   authModal: $('#auth-modal'),
+  kakaoNote: $('#kakao-mode-note'),
+  kakaoError: $('#kakao-error'),
+  mypageModal: $('#mypage-modal'),
+  mypageProfile: $('#mypage-profile'),
+  mypageAvatar: $('#mypage-avatar'),
+  mypageName: $('#mypage-name'),
+  mypageRole: $('#mypage-role'),
+  mypageSub: $('#mypage-sub'),
+  mypageLogout: $('#mypage-logout'),
+  wishList: $('#wish-list'),
+  postsList: $('#posts-list'),
+  wishCount: $('#wish-count'),
+  postsCount: $('#posts-count'),
   detailModal: $('#detail-modal'),
   sellModal: $('#sell-modal'),
   inquiryModal: $('#inquiry-modal'),
@@ -637,9 +668,12 @@ function render() {
 /* ------------------------------------------------------------------- modals */
 
 function openModal(el) {
+  if (!el) return;
   lastFocused = document.activeElement;
   el.classList.add('is-open');
   el.setAttribute('aria-hidden', 'false');
+  modalStack = modalStack.filter((m) => m !== el);
+  modalStack.push(el);
   document.body.style.overflow = 'hidden';
   const focusTarget = $('.modal-close', el);
   if (focusTarget) setTimeout(() => focusTarget.focus(), 30);
@@ -649,10 +683,11 @@ function closeModal(el) {
   if (!el || !el.classList.contains('is-open')) return;
   el.classList.remove('is-open');
   el.setAttribute('aria-hidden', 'true');
+  modalStack = modalStack.filter((m) => m !== el);
   if (el === els.authModal) {
     pendingIntent = null;
   }
-  if (!document.querySelector('.modal.is-open')) {
+  if (!modalStack.length) {
     document.body.style.overflow = '';
     if (lastFocused && document.contains(lastFocused)) lastFocused.focus();
   }
@@ -735,6 +770,9 @@ function openDetail(id) {
   if (!item) return;
 
   currentDetailId = id;
+  /* 마이페이지 등 다른 모달 위에서 열면 상세를 그 위에 쌓는다 */
+  const stacked = modalStack.some((m) => m !== els.detailModal);
+  els.detailModal.classList.toggle('is-stacked', stacked);
   els.detailContent.innerHTML = detailHTML(item);
   openModal(els.detailModal);
 }
@@ -771,6 +809,7 @@ function toggleWish(id) {
 
   if (id === currentDetailId) refreshDetail();
   render();
+  if (els.mypageModal.classList.contains('is-open')) renderMypage();
 }
 
 function showChatBox() {
@@ -782,6 +821,113 @@ function showChatBox() {
     textarea.focus();
     textarea.setSelectionRange(textarea.value.length, textarea.value.length);
   }
+}
+
+/* ------------------------------------------------------------------ mypage */
+
+function myListings() {
+  if (!state.user) return [];
+  const uid = state.user.id;
+  return state.custom.filter((item) => {
+    if (uid && item.ownerId) return item.ownerId === uid;
+    /* ownerId가 없는 초기 등록분은 판매자 닉네임으로 맞춘다 */
+    return Boolean(item.seller && item.seller.name === state.user.name);
+  });
+}
+
+function wishListings() {
+  const all = allListings();
+  return Array.from(state.wishlist).reverse()
+    .map((id) => all.find((item) => item.id === id))
+    .filter(Boolean);
+}
+
+function mypageEmptyHTML(title, desc, action) {
+  return `
+    <li class="mypage-empty">
+      <p class="mypage-empty-title">${esc(title)}</p>
+      <p class="mypage-empty-desc">${esc(desc)}</p>
+      ${action || ''}
+    </li>`;
+}
+
+function mypageRowHTML(item, kind) {
+  const action = kind === 'wish'
+    ? `<button type="button" class="mypage-action" data-mypage-unwish="${esc(item.id)}" aria-label="${esc(item.title)} 찜 해제">${heartIcon(true)}<span>해제</span></button>`
+    : `<button type="button" class="mypage-action is-delete" data-mypage-delete="${esc(item.id)}" aria-label="${esc(item.title)} 삭제">삭제</button>`;
+  const meta = [item.region, timeAgo(item.postedAt)].filter(Boolean).join(' · ');
+
+  return `
+    <li class="mypage-item">
+      <button type="button" class="mypage-item-main" data-mypage-open="${esc(item.id)}" aria-label="${esc(item.title)} 상세 열기">
+        <span class="mypage-thumb"><img src="${esc(item.image)}" alt="" loading="lazy"></span>
+        <span class="mypage-item-body">
+          <span class="mypage-item-title">${esc(item.title)}</span>
+          <span class="mypage-item-price">${won(item.price)}<span class="won">원</span></span>
+          ${meta ? `<span class="mypage-item-meta">${esc(meta)}</span>` : ''}
+        </span>
+      </button>
+      ${action}
+    </li>`;
+}
+
+function setMypageTab(tab) {
+  mypageTab = tab === 'posts' ? 'posts' : 'wish';
+  $$('.mypage-tab').forEach((btn) => {
+    const active = btn.dataset.tab === mypageTab;
+    btn.classList.toggle('is-active', active);
+    btn.setAttribute('aria-selected', String(active));
+  });
+  $('#mypage-panel-wish').hidden = mypageTab !== 'wish';
+  $('#mypage-panel-posts').hidden = mypageTab !== 'posts';
+}
+
+function renderMypage() {
+  if (!state.user) return;
+
+  const name = state.user.name || '회원';
+  const admin = isAdminUser();
+
+  els.mypageName.textContent = name;
+  els.mypageAvatar.textContent = name.trim().charAt(0) || '회';
+  els.mypageRole.textContent = admin ? '관리자' : '카카오 회원';
+  els.mypageRole.className = `role-badge${admin ? ' is-admin' : ''}`;
+  els.mypageProfile.classList.toggle('is-admin', admin);
+
+  let sub;
+  if (admin) sub = '관리자 테스트 계정 · 문의 게시판 열람 권한';
+  else if (state.user.demo) sub = '데모 계정 · 실제 카카오 로그인이 아닙니다';
+  else sub = `${state.user.provider || '카카오'} 계정으로 로그인${state.user.email ? ` · ${state.user.email}` : ''}`;
+  els.mypageSub.textContent = sub;
+
+  const wishes = wishListings();
+  const posts = myListings();
+  els.wishCount.textContent = wishes.length;
+  els.postsCount.textContent = posts.length;
+
+  els.wishList.innerHTML = wishes.length
+    ? wishes.map((item) => mypageRowHTML(item, 'wish')).join('')
+    : mypageEmptyHTML('찜한 매물이 없습니다', '마음에 드는 매물의 하트를 눌러 여기에 모아 보세요.');
+
+  els.postsList.innerHTML = posts.length
+    ? posts.map((item) => mypageRowHTML(item, 'posts')).join('')
+    : mypageEmptyHTML(
+      '아직 올린 글이 없습니다',
+      '헤더의 판매하기로 첫 매물을 등록해 보세요.',
+      '<button type="button" class="btn btn-primary btn-sm" data-mypage-sell>판매하기</button>'
+    );
+
+  setMypageTab(mypageTab);
+}
+
+function openMypage() {
+  if (!state.user) {
+    showAuth();
+    toast('로그인 후 마이페이지를 볼 수 있습니다.');
+    return;
+  }
+  renderMypage();
+  openModal(els.mypageModal);
 }
 
 /* ------------------------------------------------------------------ delete */
@@ -812,6 +958,7 @@ function deleteListing(id) {
   closeModal(els.detailModal);
   currentDetailId = null;
   render();
+  if (els.mypageModal.classList.contains('is-open')) renderMypage();
   toast('매물이 삭제되었습니다.');
 }
 
@@ -832,6 +979,7 @@ function renderHeader() {
     const name = state.user.name || '회원';
     els.userName.textContent = name;
     els.userAvatar.textContent = name.trim().charAt(0) || '회';
+    els.userMenu.setAttribute('aria-label', `${name}님 마이페이지 열기`);
   }
   els.userMenu.classList.toggle('is-admin', loggedIn && isAdminUser());
 }
@@ -861,9 +1009,276 @@ function loginAsAdmin() {
 
 function loginWithProvider(provider) {
   loginUser(
-    { name: '사운드러버', email: 'soundlover@soundyard.kr', provider },
+    {
+      id: 'demo-soundlover',
+      name: '사운드러버',
+      email: 'soundlover@soundyard.kr',
+      provider,
+      role: 'member',
+      demo: true
+    },
     `${provider} 계정으로 로그인되었습니다. (데모)`
   );
+}
+
+function logoutUser() {
+  const sdk = kakaoSdk();
+  const kakaoToken = Boolean(sdk && sdk.isInitialized() && sdk.Auth.getAccessToken());
+
+  state.user = null;
+  try { localStorage.removeItem('sy_user'); } catch (err) { /* noop */ }
+  if (state.admin) {
+    state.admin = false;
+    writeAdminSession(false);
+  }
+
+  renderHeader();
+  renderInquiries();
+  closeModal(els.mypageModal);
+
+  /* SDK에 할당된 카카오 토큰도 서버에서 폐기한다 */
+  if (kakaoToken) {
+    sdk.Auth.logout().catch((err) => console.warn('[SoundYard] 카카오 토큰 폐기 실패', err));
+  }
+
+  toast('로그아웃되었습니다.');
+}
+
+/* --------------------------------------------------------------- kakao sdk */
+
+const KAKAO_INTENT_KEY = 'sy_kakao_intent';
+
+function kakaoRedirectUri() {
+  if (KAKAO_CONFIG.redirectUri) return KAKAO_CONFIG.redirectUri;
+  if (window.location.protocol === 'file:') {
+    return window.location.href.split('?')[0].split('#')[0];
+  }
+  const path = window.location.pathname.replace(/index\.html$/, '');
+  return window.location.origin + path;
+}
+
+function kakaoSdk() {
+  const sdk = window.Kakao;
+  return sdk && typeof sdk.init === 'function' ? sdk : null;
+}
+
+function initKakao() {
+  if (!KAKAO_CONFIG.jsKey) return null;
+  const sdk = kakaoSdk();
+  if (!sdk) {
+    console.error('[SoundYard] 카카오 SDK 스크립트를 불러오지 못했습니다. index.html의 SDK 스크립트 태그를 확인하세요.');
+    return null;
+  }
+  if (!sdk.isInitialized()) {
+    try {
+      sdk.init(KAKAO_CONFIG.jsKey);
+    } catch (err) {
+      console.error('[SoundYard] Kakao.init 실패', err);
+      return null;
+    }
+  }
+  return sdk.isInitialized() ? sdk : null;
+}
+
+function setKakaoNote(message, tone) {
+  if (!els.kakaoNote) return;
+  els.kakaoNote.hidden = !message;
+  els.kakaoNote.textContent = message || '';
+  els.kakaoNote.dataset.tone = tone || '';
+}
+
+function showKakaoError(message) {
+  if (!els.kakaoError) return;
+  els.kakaoError.textContent = message || '';
+  els.kakaoError.hidden = !message;
+}
+
+/* 콘솔에 카카오 디벨로퍼스에서 확인해야 할 설정을 그대로 찍어 둔다 */
+function kakaoSetupGuide(reason) {
+  const lines = [
+    `[SoundYard] 카카오 로그인 실패: ${reason}`,
+    '카카오 디벨로퍼스 설정을 확인하세요.',
+    `  1) JavaScript 키 → app.js KAKAO_CONFIG.jsKey (현재 ${KAKAO_CONFIG.jsKey ? '입력됨' : '비어 있음'})`,
+    `  2) REST API 키 → app.js KAKAO_CONFIG.restKey (현재 ${KAKAO_CONFIG.restKey ? '입력됨' : '비어 있음'})`,
+    `  3) 플랫폼 > Web > 사이트 도메인에 ${kakaoRedirectUri()} 의 오리진 등록`,
+    `  4) 카카오 로그인 > Redirect URI에 ${kakaoRedirectUri()} 를 정확히 같은 값으로 등록`,
+    '  5) 카카오 로그인 > 일반 > 카카오 로그인 활성화 ON',
+    '  6) 카카오 로그인 > 보안 > Client Secret 사용 안 함 (정적 페이지는 브라우저가 직접 토큰을 교환)',
+    '  7) 동의항목 > 카카오계정(닉네임) 사용 설정'
+  ];
+  console.error(lines.join('\n'));
+}
+
+function initKakaoMode() {
+  if (!KAKAO_CONFIG.jsKey) {
+    console.info('[SoundYard] 카카오 로그인: 데모 모드 — KAKAO_CONFIG.jsKey가 비어 있어 "사운드러버" 데모 계정으로 로그인합니다.');
+    setKakaoNote('데모 모드 · 카카오 JS 키가 아직 등록되지 않았습니다', 'demo');
+    return;
+  }
+
+  const sdk = initKakao();
+  if (!sdk) {
+    setKakaoNote('카카오 SDK 초기화 실패 · 콘솔을 확인해 주세요', 'warn');
+    return;
+  }
+
+  console.info('[SoundYard] 카카오 로그인: 실제 SDK 모드', {
+    redirectUri: kakaoRedirectUri(),
+    restKey: Boolean(KAKAO_CONFIG.restKey)
+  });
+
+  if (!KAKAO_CONFIG.restKey) {
+    console.warn('[SoundYard] KAKAO_CONFIG.restKey가 비어 있어 인가 코드를 토큰으로 교환할 수 없습니다. REST API 키를 입력하세요.');
+    setKakaoNote('카카오 로그인 준비 중 · REST API 키가 필요합니다', 'warn');
+    return;
+  }
+  setKakaoNote('');
+}
+
+function saveKakaoIntent() {
+  if (!pendingIntent) return;
+  try {
+    sessionStorage.setItem(KAKAO_INTENT_KEY, JSON.stringify({
+      intent: pendingIntent,
+      detailId: currentDetailId
+    }));
+  } catch (err) { /* noop */ }
+}
+
+/* 카카오 리다이렉트를 거치면 메모리 상태가 날아가므로 세션에 담아 둔 의도를 되살린다 */
+function restoreKakaoIntent() {
+  try {
+    const raw = sessionStorage.getItem(KAKAO_INTENT_KEY);
+    sessionStorage.removeItem(KAKAO_INTENT_KEY);
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    if (saved.intent === 'chat' && saved.detailId) openDetail(saved.detailId);
+    pendingIntent = saved.intent || null;
+  } catch (err) { /* noop */ }
+}
+
+function stripKakaoQuery() {
+  const url = new URL(window.location.href);
+  ['code', 'state', 'error', 'error_description'].forEach((key) => url.searchParams.delete(key));
+  const query = url.searchParams.toString();
+  window.history.replaceState({}, '', url.pathname + (query ? `?${query}` : '') + url.hash);
+}
+
+function startKakaoLogin() {
+  /* 키 미등록: 기존 데모 로그인 */
+  if (!KAKAO_CONFIG.jsKey) {
+    loginWithProvider('카카오');
+    return;
+  }
+
+  const sdk = initKakao();
+  if (!sdk) {
+    showKakaoError('카카오 SDK를 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.');
+    return;
+  }
+  if (!KAKAO_CONFIG.restKey) {
+    showKakaoError('REST API 키(KAKAO_CONFIG.restKey)가 없어 로그인을 완료할 수 없습니다. app.js 상단 설정을 확인해 주세요.');
+    kakaoSetupGuide('REST API 키 미등록');
+    return;
+  }
+
+  showKakaoError('');
+  saveKakaoIntent();
+  try {
+    sdk.Auth.authorize({ redirectUri: kakaoRedirectUri() });
+  } catch (err) {
+    showKakaoError('카카오 로그인을 시작하지 못했습니다. 콘솔을 확인해 주세요.');
+    kakaoSetupGuide((err && err.message) || String(err));
+  }
+}
+
+/* 인가 코드 → 토큰 교환 (정적 페이지라 브라우저에서 직접 호출, Client Secret 꺼진 앱 전용) */
+async function requestKakaoToken(code) {
+  const body = new URLSearchParams({
+    grant_type: 'authorization_code',
+    client_id: KAKAO_CONFIG.restKey,
+    redirect_uri: kakaoRedirectUri(),
+    code
+  });
+
+  const res = await fetch('https://kauth.kakao.com/oauth/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8' },
+    body: body.toString()
+  });
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok || !data.access_token) {
+    const reason = data.error_description || data.error || `HTTP ${res.status}`;
+    throw new Error(reason);
+  }
+  return data;
+}
+
+async function requestKakaoProfile(accessToken) {
+  const sdk = initKakao();
+  if (!sdk) throw new Error('카카오 SDK 초기화 실패');
+
+  sdk.Auth.setAccessToken(accessToken);
+  const me = await sdk.API.request({ url: '/v2/user/me' });
+  const account = me.kakao_account || {};
+  const profile = account.profile || me.properties || {};
+  const nickname = String(profile.nickname || '').trim() || '카카오 회원';
+
+  return {
+    id: me.id,
+    nickname,
+    email: account.email || '',
+    image: profile.profile_image_url || profile.thumbnail_image || ''
+  };
+}
+
+function openAuthWithKakaoError(message) {
+  showKakaoError(message);
+  openModal(els.authModal);
+}
+
+/* 페이지 로드 시 ?code= / ?error= 를 확인해 카카오 로그인을 마무리한다 */
+async function completeKakaoLogin() {
+  if (!KAKAO_CONFIG.jsKey) return false;
+
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  const error = params.get('error');
+  if (!code && !error) return false;
+
+  const description = params.get('error_description') || '';
+  stripKakaoQuery();
+
+  if (error) {
+    const message = error === 'KOE320'
+      ? '카카오 로그인을 취소했습니다.'
+      : `카카오 로그인에 실패했습니다. (${error}${description ? ` · ${description}` : ''})`;
+    console.warn('[SoundYard] 카카오 인가 요청 실패', { error, description });
+    openAuthWithKakaoError(message);
+    return true;
+  }
+
+  try {
+    const token = await requestKakaoToken(code);
+    const profile = await requestKakaoProfile(token.access_token);
+    restoreKakaoIntent();
+    loginUser(
+      {
+        id: `kakao-${profile.id}`,
+        name: profile.nickname,
+        email: profile.email,
+        provider: '카카오',
+        role: 'member'
+      },
+      `${profile.nickname}님, 카카오 계정으로 로그인되었습니다.`
+    );
+  } catch (err) {
+    const reason = (err && err.message) || '알 수 없는 오류';
+    openAuthWithKakaoError(`카카오 로그인을 완료하지 못했습니다. (${reason})`);
+    kakaoSetupGuide(reason);
+  }
+  return true;
 }
 
 /* --------------------------------------------------------------------- sell */
@@ -1051,6 +1466,7 @@ function handleSell(event) {
 
   const item = {
     id: `u-${Date.now()}`,
+    ownerId: state.user.id || state.user.name,
     title,
     category,
     price,
@@ -1354,20 +1770,41 @@ function init() {
   /* auth */
   $('#auth-btn').addEventListener('click', () => showAuth());
   $('#admin-login').addEventListener('click', loginAsAdmin);
-  els.logoutBtn.addEventListener('click', () => {
-    state.user = null;
-    try { localStorage.removeItem('sy_user'); } catch (err) { /* noop */ }
-    if (state.admin) {
-      state.admin = false;
-      writeAdminSession(false);
-      renderInquiries();
-    }
-    renderHeader();
-    toast('로그아웃되었습니다.');
-  });
+  $('#kakao-login').addEventListener('click', startKakaoLogin);
 
-  $$('.social-btn').forEach((btn) => {
-    btn.addEventListener('click', () => loginWithProvider(btn.dataset.provider));
+  /* mypage */
+  els.userMenu.addEventListener('click', openMypage);
+  els.mypageLogout.addEventListener('click', logoutUser);
+  els.mypageModal.addEventListener('click', (event) => {
+    const tab = event.target.closest('[data-tab]');
+    if (tab) {
+      setMypageTab(tab.dataset.tab);
+      return;
+    }
+
+    const sell = event.target.closest('[data-mypage-sell]');
+    if (sell) {
+      closeModal(els.mypageModal);
+      setTimeout(openSell, 120);
+      return;
+    }
+
+    const open = event.target.closest('[data-mypage-open]');
+    if (open) {
+      openDetail(open.dataset.mypageOpen);
+      return;
+    }
+
+    const unwish = event.target.closest('[data-mypage-unwish]');
+    if (unwish) {
+      toggleWish(unwish.dataset.mypageUnwish);
+      return;
+    }
+
+    const remove = event.target.closest('[data-mypage-delete]');
+    if (remove) {
+      deleteListing(remove.dataset.mypageDelete);
+    }
   });
 
   /* sell */
@@ -1434,8 +1871,8 @@ function init() {
 
   document.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape') return;
-    const open = $$('.modal.is-open');
-    if (open.length) closeModal(open[open.length - 1]);
+    const top = modalStack[modalStack.length - 1];
+    if (top) closeModal(top);
   });
 
   /* inert placeholder links */
@@ -1446,6 +1883,10 @@ function init() {
       toast('데모 화면에서는 지원하지 않는 기능입니다.');
     }
   });
+
+  /* 카카오 로그인 모드 표시 + 리다이렉트 복귀 처리 */
+  initKakaoMode();
+  completeKakaoLogin();
 }
 
 init();

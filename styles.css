@@ -176,7 +176,21 @@ img { max-width: 100%; display: block; }
   display: flex;
   align-items: center;
   gap: 8px;
-  padding-left: 4px;
+  height: 36px;
+  padding: 0 9px 0 4px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+
+.user-menu:hover { background: var(--bg-soft); border-color: var(--line); }
+.user-menu:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+.user-chevron {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  color: var(--muted-2);
 }
 
 .user-avatar {
@@ -1108,6 +1122,257 @@ img { max-width: 100%; display: block; }
   word-break: keep-all;
 }
 
+.auth-kakao-note {
+  margin: 10px 0 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--muted-2);
+  text-align: center;
+  word-break: keep-all;
+}
+
+.auth-kakao-note[data-tone="warn"] { color: #8a5a00; }
+
+/* --------------------------------------------------------------- mypage */
+
+.modal.is-stacked { z-index: 110; }
+
+.mypage-panel {
+  max-width: 560px;
+  padding: 0 28px 24px;
+}
+
+.mypage-profile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 2px 0 18px;
+}
+
+.mypage-avatar {
+  width: 52px;
+  height: 52px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--ink);
+  color: #fff;
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.mypage-profile.is-admin .mypage-avatar { background: #1c6b36; }
+
+.mypage-identity {
+  flex: 1;
+  min-width: 0;
+}
+
+.mypage-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+.mypage-name > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.role-badge {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #8a5a00;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: -0.1px;
+}
+
+.role-badge.is-admin { background: #e7f5ec; color: #1c6b36; }
+
+.mypage-sub {
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mypage-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--line);
+}
+
+.mypage-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 42px;
+  margin: 0 20px -1px 0;
+  padding: 0 2px;
+  border-bottom: 2px solid transparent;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.mypage-tab:hover { color: var(--ink-2); }
+
+.mypage-tab.is-active {
+  color: var(--ink);
+  font-weight: 700;
+  border-bottom-color: var(--ink);
+}
+
+.tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--bg-soft-2);
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.mypage-tab.is-active .tab-count { background: var(--ink); color: #fff; }
+
+.mypage-list {
+  list-style: none;
+  margin: 0;
+  padding: 14px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 46vh;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.mypage-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  transition: border-color 0.12s ease, background-color 0.12s ease;
+}
+
+.mypage-item:hover { border-color: var(--line-strong); background: #fdfdfe; }
+
+.mypage-item-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.mypage-thumb {
+  width: 56px;
+  height: 56px;
+  flex: none;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bg-soft-2);
+}
+
+.mypage-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+.mypage-item-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.mypage-item-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.mypage-item-price {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+
+.mypage-item-price .won { font-size: 11.5px; font-weight: 500; margin-left: 1px; }
+
+.mypage-item-meta {
+  font-size: 11.5px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mypage-action {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: #fff;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.mypage-action svg { width: 14px; height: 14px; color: #b42318; }
+.mypage-action:hover { background: var(--bg-soft); color: var(--ink-2); }
+
+.mypage-action.is-delete { color: var(--danger); border-color: #e3c4bf; }
+.mypage-action.is-delete:hover { background: #fdf3f2; border-color: #dfa39b; }
+
+.mypage-empty {
+  padding: 34px 16px 30px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.mypage-empty-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+
+.mypage-empty-desc {
+  margin-top: 6px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--muted);
+  word-break: keep-all;
+}
+
+.mypage-empty .btn { margin-top: 14px; }
+
 /* --------------------------------------------------------------- sell modal */
 
 .sell-panel {
@@ -1494,6 +1759,17 @@ img { max-width: 100%; display: block; }
     padding: 0 20px 24px;
     border-radius: 18px 18px 0 0;
   }
+
+  .mypage-panel {
+    max-width: none;
+    padding: 0 20px 22px;
+    border-radius: 18px 18px 0 0;
+  }
+
+  .mypage-list { max-height: 48vh; }
+  .mypage-thumb { width: 50px; height: 50px; }
+  .user-menu { gap: 6px; padding: 0 6px 0 0; }
+  .user-chevron { display: none; }
 
   .footer-inner { padding: 30px 16px 22px; }
   .footer-main { gap: 28px; }

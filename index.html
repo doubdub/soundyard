@@ -6,7 +6,7 @@
 <title>사운드야드 - 중고 음향기기·악기 거래</title>
 <meta name="description" content="마이크, 아웃보드, 스피커, 오디오 인터페이스부터 기타, 드럼, 관현악기까지. 사운드야드에서 중고 음향기기와 악기를 거래하세요.">
 <link rel="icon" href="assets/mic-tlm103.svg" type="image/svg+xml">
-<link rel="stylesheet" href="styles.css?v=20261119-5">
+<link rel="stylesheet" href="styles.css?v=20261119-6">
 </head>
 <body>
 
@@ -29,11 +29,11 @@
       <button type="button" class="header-link" id="inquiry-btn">문의 게시판</button>
       <button type="button" class="btn btn-primary" id="sell-btn">판매하기</button>
       <button type="button" class="btn btn-outline" id="auth-btn">로그인</button>
-      <div class="user-menu" id="user-menu" hidden>
+      <button type="button" class="user-menu" id="user-menu" hidden aria-haspopup="dialog" aria-controls="mypage-modal">
         <span class="user-avatar" id="user-avatar" aria-hidden="true"></span>
         <span class="user-name" id="user-name"></span>
-        <button type="button" class="link-btn" id="logout-btn">로그아웃</button>
-      </div>
+        <svg class="user-chevron" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 9.5l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
     </div>
   </div>
 </header>
@@ -149,10 +149,50 @@
         <span>카카오로 시작하기</span>
       </button>
     </div>
+    <p class="auth-kakao-note" id="kakao-mode-note" hidden></p>
+    <p class="field-error" id="kakao-error" hidden></p>
 
     <div class="auth-alt">
       <button type="button" class="auth-admin-btn" id="admin-login">관리자 테스트 로그인</button>
       <p class="auth-admin-note">테스트용 계정 · 판매글 작성/삭제, 문의 열람</p>
+    </div>
+  </div>
+</div>
+
+<!-- 마이페이지 -->
+<div class="modal" id="mypage-modal" role="dialog" aria-modal="true" aria-labelledby="mypage-title" aria-hidden="true">
+  <div class="modal-backdrop" data-close></div>
+  <div class="modal-panel mypage-panel" role="document">
+    <div class="modal-head">
+      <h2 id="mypage-title">마이페이지</h2>
+      <button type="button" class="modal-close modal-close-inline" data-close aria-label="닫기">
+        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="#111827" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <div class="mypage-profile" id="mypage-profile">
+      <span class="mypage-avatar" id="mypage-avatar" aria-hidden="true"></span>
+      <div class="mypage-identity">
+        <p class="mypage-name"><span id="mypage-name"></span><span class="role-badge" id="mypage-role">카카오 회원</span></p>
+        <p class="mypage-sub" id="mypage-sub"></p>
+      </div>
+      <button type="button" class="btn btn-outline btn-sm" id="mypage-logout">로그아웃</button>
+    </div>
+
+    <div class="mypage-tabs" role="tablist" aria-label="마이페이지 목록">
+      <button type="button" class="mypage-tab is-active" id="tab-wish" role="tab" aria-selected="true" aria-controls="mypage-panel-wish" data-tab="wish">
+        찜한 매물<span class="tab-count" id="wish-count">0</span>
+      </button>
+      <button type="button" class="mypage-tab" id="tab-posts" role="tab" aria-selected="false" aria-controls="mypage-panel-posts" data-tab="posts">
+        내가 올린 글<span class="tab-count" id="posts-count">0</span>
+      </button>
+    </div>
+
+    <div class="mypage-panel-body" id="mypage-panel-wish" role="tabpanel" aria-labelledby="tab-wish">
+      <ul class="mypage-list" id="wish-list"></ul>
+    </div>
+    <div class="mypage-panel-body" id="mypage-panel-posts" role="tabpanel" aria-labelledby="tab-posts" hidden>
+      <ul class="mypage-list" id="posts-list"></ul>
     </div>
   </div>
 </div>
@@ -271,6 +311,7 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="app.js?v=20261119-5"></script>
+<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js"></script>
+<script src="app.js?v=20261119-6"></script>
 </body>
 </html>
