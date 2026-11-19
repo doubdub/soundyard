@@ -681,6 +681,150 @@ function render() {
   syncNav();
 }
 
+/* ------------------------------------------ 모달 ↔ 브라우저 히스토리 연동
+   모달을 열 때마다 히스토리 엔트리를 하나씩 쌓고(syDepth = 열린 모달 개수),
+   안드로이드·브라우저 뒤로가기(popstate)를 누르면 페이지를 벗어나는 대신
+   최상단 모달을 한 단계씩 닫는다.
+   - 화면의 X·←·Escape로 닫을 때는 쌓아 둔 엔트리를 history.go(-n)으로 함께 정리해
+     유령 히스토리가 남지 않게 한다.
+   - 카카오 리다이렉트 복귀(?code=...) 후의 replaceState는 기존 히스토리 상태를 보존한다. */
+
+const HISTORY_DEPTH_KEY = 'syDepth';
+const HISTORY_STACK_KEY = 'syStack';
+
+let historyEntryDepth = 0;      /* 지금 위치한 엔트리에 기록된 모달 깊이 */
+let historyTrimScheduled = false;
+let historyRestoring = false;   /* 히스토리 복원 중에는 엔트리를 새로 쌓지 않는다 */
+
+function readHistoryDepth(state) {
+  return state && Number.isFinite(state[HISTORY_DEPTH_KEY]) ? state[HISTORY_DEPTH_KEY] : 0;
+}
+
+/* 되돌아왔을 때 다시 열어 줄 모달 설명 */
+function describeModal(el) {
+  if (!el) return null;
+  const entry = { modal: el.id || '' };
+  if (el === els.detailModal) entry.detailId = currentDetailId;
+  else if (el === els.chatModal) entry.roomId = activeRoomId;
+  else if (el === els.mypageModal) entry.tab = mypageTab;
+  return entry;
+}
+
+function historyPayload(depth) {
+  const payload = {};
+  payload[HISTORY_DEPTH_KEY] = depth;
+  payload[HISTORY_STACK_KEY] = modalStack.map(describeModal).filter(Boolean);
+  return payload;
+}
+
+/* 페이지에 처음 들어왔을 때(카카오 리다이렉트 복귀 포함) 현재 엔트리를 깊이 0으로 맞춘다 */
+function initHistoryBase() {
+  try {
+    const state = Object.assign({}, window.history.state || {});
+    state[HISTORY_DEPTH_KEY] = 0;
+    delete state[HISTORY_STACK_KEY];
+    window.history.replaceState(state, '', window.location.href);
+  } catch (err) { /* noop */ }
+  historyEntryDepth = 0;
+  historyTrimScheduled = false;
+}
+
+function pushModalHistory(el) {
+  if (historyRestoring) return;
+  const depth = modalStack.length;
+  const payload = historyPayload(depth);
+  try {
+    if (depth <= historyEntryDepth) {
+      /* 같은 깊이에서 모달만 바뀐 경우(예: 닫자마자 다른 모달을 연 경우) 엔트리를 새로 쌓지 않는다 */
+      window.history.replaceState(payload, '', window.location.href);
+    } else {
+      window.history.pushState(payload, '', window.location.href);
+    }
+    historyEntryDepth = depth;
+  } catch (err) { /* 히스토리 사용이 막힌 환경에서는 화면만 동작한다 */ }
+}
+
+/* 화면에서 모달을 닫았을 때 쌓아 둔 엔트리를 같은 수만큼 되돌려 정리한다.
+   한 작업 안에서 여러 모달이 닫혀도 history.go()는 한 번만 부른다. */
+function scheduleHistoryTrim() {
+  if (historyTrimScheduled) return;
+  historyTrimScheduled = true;
+  const run = () => {
+    historyTrimScheduled = false;
+    const diff = historyEntryDepth - modalStack.length;
+    if (diff <= 0) return;
+    historyEntryDepth = modalStack.length;
+    try { window.history.go(-diff); } catch (err) { /* noop */ }
+  };
+  if (typeof Promise !== 'undefined') Promise.resolve().then(run);
+  else setTimeout(run, 0);
+}
+
+function openModalFromHistoryEntry(entry) {
+  if (!entry || !entry.modal) return false;
+  switch (entry.modal) {
+    case 'detail-modal':
+      if (!entry.detailId) return false;
+      openDetail(entry.detailId);
+      return els.detailModal.classList.contains('is-open');
+    case 'chat-modal':
+      if (!entry.roomId || !state.chats.some((room) => room.id === entry.roomId)) return false;
+      openChatRoom(entry.roomId);
+      return els.chatModal.classList.contains('is-open');
+    case 'mypage-modal':
+      if (!state.user) return false;
+      openMypage();
+      return els.mypageModal.classList.contains('is-open');
+    case 'auth-modal':
+      showAuth();
+      return els.authModal.classList.contains('is-open');
+    case 'sell-modal':
+      openSell();
+      return els.sellModal.classList.contains('is-open');
+    case 'inquiry-modal':
+      openInquiry();
+      return els.inquiryModal.classList.contains('is-open');
+    default:
+      return false;
+  }
+}
+
+/* 앞으로가기 등으로 이전 모달 엔트리에 다시 도착했을 때 그 모달들을 되살린다 */
+function restoreModalChain(chain) {
+  if (!Array.isArray(chain) || !chain.length) return;
+  historyRestoring = true;
+  try {
+    chain.forEach((entry) => openModalFromHistoryEntry(entry));
+  } finally {
+    historyRestoring = false;
+  }
+}
+
+/* popstate: 브라우저 뒤로/앞으로가기에 화면을 맞춘다 */
+function applyHistoryState(state) {
+  const depth = readHistoryDepth(state);
+  historyEntryDepth = depth;
+
+  /* 이미 닫힌 모달이 스택에 남아 있으면 먼저 걷어낸다 */
+  while (modalStack.length && !modalStack[modalStack.length - 1].classList.contains('is-open')) {
+    modalStack.pop();
+  }
+
+  while (modalStack.length > depth) {
+    closeModal(modalStack[modalStack.length - 1], { fromHistory: true });
+  }
+
+  if (modalStack.length < depth) {
+    restoreModalChain(state && state[HISTORY_STACK_KEY]);
+  }
+
+  if (modalStack.length !== depth) {
+    /* 되살리지 못한 경우(로그아웃·삭제된 매물 등) 현재 화면에 맞춰 히스토리를 정리한다 */
+    historyEntryDepth = modalStack.length;
+    try { window.history.replaceState(historyPayload(historyEntryDepth), '', window.location.href); } catch (err) { /* noop */ }
+  }
+}
+
 /* ------------------------------------------------------------------- modals */
 
 function openModal(el) {
@@ -692,11 +836,12 @@ function openModal(el) {
   modalStack.push(el);
   el.style.zIndex = String(100 + modalStack.length * 10);
   document.body.style.overflow = 'hidden';
+  pushModalHistory(el);
   const focusTarget = $('.modal-close', el);
   if (focusTarget) setTimeout(() => focusTarget.focus(), 30);
 }
 
-function closeModal(el) {
+function closeModal(el, options) {
   if (!el || !el.classList.contains('is-open')) return;
   el.classList.remove('is-open');
   el.setAttribute('aria-hidden', 'true');
@@ -708,6 +853,8 @@ function closeModal(el) {
     document.body.style.overflow = '';
     if (lastFocused && document.contains(lastFocused)) lastFocused.focus();
   }
+  /* 뒤로가기로 닫히는 경우는 히스토리가 이미 이동했으므로 정리하지 않는다 */
+  if (!(options && options.fromHistory)) scheduleHistoryTrim();
 }
 
 /* ------------------------------------------------------------------- detail */
@@ -1494,7 +1641,8 @@ function stripKakaoQuery() {
   const url = new URL(window.location.href);
   ['code', 'state', 'error', 'error_description'].forEach((key) => url.searchParams.delete(key));
   const query = url.searchParams.toString();
-  window.history.replaceState({}, '', url.pathname + (query ? `?${query}` : '') + url.hash);
+  /* 히스토리 상태(syDepth 등)는 그대로 두고 주소만 바꿔 모달 히스토리 연동과 충돌하지 않게 한다 */
+  window.history.replaceState(window.history.state || {}, '', url.pathname + (query ? `?${query}` : '') + url.hash);
 }
 
 function startKakaoLogin() {
@@ -1977,6 +2125,9 @@ function toast(message) {
 function init() {
   buildNav();
 
+  /* 브라우저/안드로이드 뒤로가기를 모달 닫기로 연결한다 */
+  initHistoryBase();
+  window.addEventListener('popstate', (event) => applyHistoryState(event.state));
   els.sellCategory.insertAdjacentHTML(
     'beforeend',
     CATEGORIES.map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join('')
